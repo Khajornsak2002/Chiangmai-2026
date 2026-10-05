@@ -89,6 +89,25 @@
   .who .n { color: var(--owe); border-style: dashed; border-color: color-mix(in srgb, var(--owe) 50%, transparent); }
   .empty { color: var(--muted); padding: 20px; text-align: center; background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; }
 
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; border-radius: 999px; padding: 6px 14px; cursor: pointer; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); }
+  .btn.ghost { background: var(--surface); color: var(--accent); border-color: var(--line); }
+  button.tag { border: 0; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .who button { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; min-height: 28px; }
+  .who button.y { background: var(--paid-soft); color: var(--paid); border-color: transparent; }
+  .who button.n { color: var(--owe); border-style: dashed; border-color: color-mix(in srgb, var(--owe) 50%, transparent); }
+  .who button:disabled { opacity: .5; cursor: wait; }
+  dialog { border: 1px solid var(--line); border-radius: 16px; padding: 0; width: min(480px, calc(100% - 32px)); background: var(--surface); color: var(--text); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog form { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  dialog h3 { font-size: 18px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+  .field input[type=text], .field input[type=number], .field select { font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .checks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+  .checks label, .inline { display: flex; align-items: center; gap: 6px; }
+  .formbtns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100% - 32px); }
+  .toast.show { opacity: 1; }
   footer { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
 </style>
 </head>
@@ -99,11 +118,33 @@
   <p class="sub">ใครจ่ายอะไรไปแล้ว ใครยังค้างอะไรบ้าง</p>
   <div class="sync">
     <span id="syncStatus"><i class="led"></i>กำลังโหลดข้อมูลจาก Google Sheet…</span>
-    <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ แก้ไขใน Google Sheet</a>
+    <span class="actions">
+      <button id="addBtn" class="btn" type="button" hidden onclick="openAdd()">+ เพิ่มรายการ</button>
+      <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ แก้ไขใน Google Sheet</a>
+    </span>
   </div>
 </header>
 
 <main class="wrap" id="app"></main>
+
+<dialog id="addDialog">
+  <form id="addForm" method="dialog">
+    <h3>เพิ่มรายการค่าใช้จ่าย</h3>
+    <label class="field">ชื่อรายการ<input type="text" name="item" required placeholder="เช่น ค่าอาหารเย็นวันที่ 27"></label>
+    <label class="field">ยอดรวม (บาท)<input type="number" name="total" min="0" step="0.01" inputmode="decimal" placeholder="เว้นว่างได้ถ้ายังไม่รู้ราคา"></label>
+    <label class="field">หมายเหตุ<input type="text" name="note"></label>
+    <label class="field">สถานะ
+      <select name="status"><option>ยังไม่จ่าย</option><option>จ่ายแล้ว</option></select>
+    </label>
+    <div class="field">คนสำรองจ่าย<div class="checks" id="payerChecks"></div></div>
+    <label class="inline"><input type="checkbox" name="refund"> มัดจำที่ได้คืน (ไม่นับรวมในยอดหาร)</label>
+    <div class="formbtns">
+      <button class="btn ghost" type="button" onclick="addDialog.close()">ยกเลิก</button>
+      <button class="btn" type="submit" id="saveBtn">บันทึก</button>
+    </div>
+  </form>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
 
 <footer class="wrap">ข้อมูลอัปเดตจาก Google Sheet อัตโนมัติทุก 30 วินาที</footer>
 
@@ -112,6 +153,8 @@
 const SHEET_ID = "1g6TUgi-lsjH7V-GZ_DfPVEWCNYqz2OyLvq09_fQpO-4";
 const SHEET_GID = "490426652";      // แท็บค่าใช้จ่าย
 const REFRESH_SEC = 30;
+// URL ของ Apps Script เว็บแอป (ได้หลังกด Deploy) ถ้าเว้นว่าง หน้านี้จะดูได้อย่างเดียว
+const WEB_APP_URL = "";
 // รายการที่หมายเหตุมีคำนี้ = เงินมัดจำที่ได้คืน ไม่นับรวมในยอดหาร
 const REFUND_KEYWORD = "ไม่เอาไปรวม";
 // ชื่อคน: ดึงจากหัวคอลัมน์ช่องติ๊กในชีต (แถวบนสุด A1:Z5) ถ้าดึงไม่ได้ใช้รายชื่อนี้
@@ -240,12 +283,15 @@ function render() {
               <div class="amt">${it.total ? `<b>${baht(it.total)}</b><small>คนละ ${baht(it.share)}</small>` : `<small>ยังไม่ใส่ราคา</small>`}</div>
             </div>
             <div class="row2">
-              <span class="tag ${it.status === "จ่ายแล้ว" ? "paid" : "unpaid"}">${esc(it.status || "ยังไม่จ่าย")}</span>
+              ${EDITABLE
+                ? `<button type="button" class="tag ${it.status === "จ่ายแล้ว" ? "paid" : "unpaid"}" title="แตะเพื่อเปลี่ยนสถานะ" onclick="toggleStatus(${items.indexOf(it)})">${esc(it.status || "ยังไม่จ่าย")} ⇄</button>`
+                : `<span class="tag ${it.status === "จ่ายแล้ว" ? "paid" : "unpaid"}">${esc(it.status || "ยังไม่จ่าย")}</span>`}
               ${it.refund ? `<span class="tag refund">มัดจำ ได้คืน · ไม่นับรวม</span>` : ""}
               ${it.payer ? `<span>สำรองจ่ายโดย <b>${esc(it.payer)}</b></span>` : ""}
             </div>
-            ${!it.refund && it.share ? `<div class="who">${people.map((p, k) =>
-              `<span class="${it.paid[k] ? "y" : "n"}">${it.paid[k] ? "✓" : "•"} ${esc(p)}</span>`).join("")}</div>` : ""}
+            ${!it.refund && it.share ? `<div class="who">${people.map((p, k) => EDITABLE
+              ? `<button type="button" class="${it.paid[k] ? "y" : "n"}" aria-pressed="${it.paid[k]}" onclick="togglePaid(${items.indexOf(it)}, ${k}, this)">${it.paid[k] ? "✓" : "•"} ${esc(p)}</button>`
+              : `<span class="${it.paid[k] ? "y" : "n"}">${it.paid[k] ? "✓" : "•"} ${esc(p)}</span>`).join("")}</div>` : ""}
           </div>`).join("")
         : `<div class="empty">${selected !== null ? "ไม่มีรายการค้าง 🎉" : "ไม่มีรายการ"}</div>`}
       </div>
@@ -256,7 +302,99 @@ function pick(k) { selected = selected === k ? null : k; render(); }
 function setFilter(k) { filter = k; render(); }
 function setStatus(kind, msg) { document.getElementById("syncStatus").innerHTML = `<i class="led ${kind}"></i>${esc(msg)}`; }
 
+// ====== แก้ไขจากหน้าเว็บ (ผ่าน Apps Script) ======
+const EDITABLE = !!WEB_APP_URL;
+const addDialog = document.getElementById("addDialog");
+let holdUntil = 0;   // หยุดดึงข้อมูลชั่วคราวหลังแก้ไข เพราะ Google อัปเดตช้ากว่าหน้าเว็บนิดหน่อย
+if (EDITABLE) document.getElementById("addBtn").hidden = false;
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2600);
+}
+function getPin() {
+  let pin = null;
+  try { pin = localStorage.getItem("tripPin"); } catch (e) {}
+  if (!pin) {
+    pin = prompt("ใส่รหัสทริปเพื่อแก้ไขข้อมูล");
+    if (pin) try { localStorage.setItem("tripPin", pin); } catch (e) {}
+  }
+  return pin;
+}
+async function api(payload) {
+  const pin = getPin();
+  if (!pin) throw new Error("ยังไม่ได้ใส่รหัส");
+  const res = await fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ ...payload, pin }) });
+  const j = await res.json();
+  if (!j.ok) {
+    if (j.error === "รหัสไม่ถูกต้อง") try { localStorage.removeItem("tripPin"); } catch (e) {}
+    throw new Error(j.error || "บันทึกไม่สำเร็จ");
+  }
+  holdUntil = Date.now() + 20000;
+  setTimeout(load, 21000);
+  return j;
+}
+
+async function togglePaid(ix, k, btn) {
+  const it = DATA.items[ix], value = !it.paid[k];
+  btn.disabled = true;
+  try {
+    await api({ action: "toggle", item: it.name, person: k, value });
+    it.paid[k] = value; lastJSON = JSON.stringify(DATA); render();
+    toast(`${DATA.people[k]}: ${value ? "จ่ายแล้ว" : "ยังไม่จ่าย"} · ${it.name}`);
+  } catch (e) { btn.disabled = false; toast("⚠️ " + e.message); }
+}
+
+async function toggleStatus(ix) {
+  const it = DATA.items[ix], status = it.status === "จ่ายแล้ว" ? "ยังไม่จ่าย" : "จ่ายแล้ว";
+  if (!confirm(`เปลี่ยน "${it.name}" เป็น ${status}?`)) return;
+  try {
+    await api({ action: "status", item: it.name, status });
+    it.status = status; lastJSON = JSON.stringify(DATA); render();
+    toast("บันทึกแล้ว");
+  } catch (e) { toast("⚠️ " + e.message); }
+}
+
+function openAdd() {
+  if (!DATA) return;
+  document.getElementById("payerChecks").innerHTML = DATA.people
+    .map((p, k) => `<label><input type="checkbox" name="payer" value="${k}"> ${esc(p)}</label>`).join("");
+  document.getElementById("addForm").reset();
+  addDialog.showModal();
+}
+
+document.getElementById("addForm").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const f = new FormData(ev.target), btn = document.getElementById("saveBtn");
+  const payerIdx = f.getAll("payer").map(Number);
+  let note = (f.get("note") || "").trim();
+  if (f.get("refund")) note = (note ? note + " " : "") + "(ไม่เอาไปรวมกับยอดหาร/คน)";
+  const status = f.get("status");
+  const payload = {
+    action: "add",
+    item: f.get("item").trim(),
+    total: parseFloat(f.get("total")) || 0,
+    note, status,
+    payer: payerIdx.map(k => DATA.people[k]).join(","),
+    // คนสำรองจ่าย = จ่ายส่วนของตัวเองแล้ว
+    paid: DATA.people.map((_, k) => status === "จ่ายแล้ว" && payerIdx.includes(k)),
+  };
+  if (DATA.items.some(it => it.name === payload.item)) { toast("⚠️ มีรายการชื่อนี้แล้ว ลองตั้งชื่อใหม่"); return; }
+  btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  try {
+    await api(payload);
+    const n = DATA.people.length;
+    DATA.items.push({ name: payload.item, note, total: payload.total, share: payload.total / n, status,
+      payer: payload.payer, refund: note.includes(REFUND_KEYWORD), paid: payload.paid });
+    lastJSON = JSON.stringify(DATA); render();
+    addDialog.close(); toast("เพิ่มรายการแล้ว ✓");
+  } catch (e) { toast("⚠️ " + e.message); }
+  btn.disabled = false; btn.textContent = "บันทึก";
+});
+
 async function load() {
+  if (Date.now() < holdUntil) return;
   try {
     const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${SHEET_GID}&t=${Date.now()}`;
     const [res, resNames] = await Promise.all([
