@@ -114,7 +114,9 @@ const SHEET_GID = "490426652";      // แท็บค่าใช้จ่า�
 const REFRESH_SEC = 30;
 // รายการที่หมายเหตุมีคำนี้ = เงินมัดจำที่ได้คืน ไม่นับรวมในยอดหาร
 const REFUND_KEYWORD = "ไม่เอาไปรวม";
-// ชื่อคน: ดึงจากหัวคอลัมน์ H–M ของแถว "รายการ" ในชีต ถ้าว่างจะใช้ "คนที่ 1–6"
+// ชื่อคน: ดึงจากหัวคอลัมน์ช่องติ๊กในชีต (แถวบนสุด A1:Z5) ถ้าดึงไม่ได้ใช้รายชื่อนี้
+const PEOPLE_FALLBACK = ["อ้น", "อ๋อง", "โมส", "ต้า", "เอก", "อาร์ต"];
+const HEADER_RANGE = "A1:Z5";
 
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const num = s => { const n = parseFloat(String(s || "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
@@ -138,13 +140,15 @@ function parseCSV(text) {
   return rows;
 }
 
-function build(rows) {
+function build(rows, nameRows) {
   const h = rows.findIndex(r => (r[0] || "").trim() === "รายการ");
   if (h < 0) throw new Error("ไม่พบแถวหัวตาราง");
   // หาคอลัมน์ checkbox: คอลัมน์ที่มีค่า TRUE/FALSE ในแถวข้อมูล
   const firstData = rows[h + 1] || [];
   const checkCols = firstData.map((v, i) => /^(TRUE|FALSE)$/i.test(v.trim()) ? i : -1).filter(i => i >= 0);
-  const people = checkCols.map((c, k) => (rows[h][c] || "").trim() || `คนที่ ${k + 1}`);
+  // Google ตัดข้อความในคอลัมน์ที่เป็นช่องติ๊กออก จึงอ่านชื่อจากอีกช่วงที่มีแต่หัวตาราง
+  const nameRow = (nameRows || []).slice().reverse().find(r => checkCols.some(c => (r[c] || "").trim())) || [];
+  const people = checkCols.map((c, k) => (nameRow[c] || "").trim() || PEOPLE_FALLBACK[k] || `คนที่ ${k + 1}`);
   const items = [];
   for (let r = h + 1; r < rows.length; r++) {
     const row = rows[r], name = (row[0] || "").trim();
@@ -254,10 +258,14 @@ function setStatus(kind, msg) { document.getElementById("syncStatus").innerHTML 
 
 async function load() {
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${SHEET_GID}&t=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
+    const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${SHEET_GID}&t=${Date.now()}`;
+    const [res, resNames] = await Promise.all([
+      fetch(base, { cache: "no-store" }),
+      fetch(`${base}&range=${HEADER_RANGE}`, { cache: "no-store" }).catch(() => null),
+    ]);
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = build(parseCSV(await res.text()));
+    const nameRows = resNames && resNames.ok ? parseCSV(await resNames.text()) : [];
+    const data = build(parseCSV(await res.text()), nameRows);
     const json = JSON.stringify(data);
     if (json !== lastJSON) { lastJSON = json; DATA = data; render(); }
     setStatus("ok", "ข้อมูลจาก Google Sheet · อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
