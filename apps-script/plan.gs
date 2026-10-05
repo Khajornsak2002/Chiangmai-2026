@@ -30,6 +30,20 @@ function out(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
+// หาแท็บแพลน: ชื่อตรงกัน → ชื่อตรงกันเมื่อไม่นับช่องว่าง → แท็บที่หัวตารางมี วัน/เวลา/กิจกรรม
+function findPlanSheet(ss) {
+  const norm = s => String(s).replace(/\s+/g, "").normalize("NFC");
+  const sheets = ss.getSheets().filter(s => s.getName() !== BACKUP_TAB);
+  let sh = ss.getSheetByName(TAB) || sheets.find(s => norm(s.getName()) === norm(TAB));
+  if (!sh) sh = sheets.find(s => {
+    if (s.getLastColumn() < 3) return false;
+    const head = s.getRange(1, 1, 1, s.getLastColumn()).getDisplayValues()[0].map(h => String(h).trim());
+    return ["วัน", "เวลา", "กิจกรรม"].every(c => head.indexOf(c) >= 0);
+  });
+  if (!sh) throw new Error("ไม่พบแท็บแพลน (แท็บที่มี: " + sheets.map(s => s.getName()).join(", ") + ")");
+  return sh;
+}
+
 function clean(v, max) {
   return String(v == null ? "" : v).replace(/[\r\n\t]+/g, " ").trim().slice(0, max);
 }
@@ -54,8 +68,7 @@ function savePlan(days) {
   lock.waitLock(15000);
   try {
     const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sh = ss.getSheetByName(TAB);
-    if (!sh) throw new Error("ไม่พบแท็บ " + TAB);
+    const sh = findPlanSheet(ss);
 
     // สำรองข้อมูลเดิมก่อน
     const backup = ss.getSheetByName(BACKUP_TAB) || ss.insertSheet(BACKUP_TAB);
