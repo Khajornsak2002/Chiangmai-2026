@@ -68,14 +68,14 @@
   .card .name { font-weight: 700; font-size: 16px; line-height: 1.35; }
   .card .tno { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .seat { text-align: center; border-radius: 10px; padding: 4px 10px; min-width: 76px; }
-  .seat b { display: block; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .seat b { display: block; white-space: nowrap; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
   .seat small { font-size: 12px; font-weight: 600; white-space: nowrap; }
   .seat.lower { background: var(--lower-soft); color: var(--lower); }
   .seat.upper { background: var(--upper-soft); color: var(--upper); }
   .card .btns { display: flex; gap: 8px; }
   .card .btns .btn { flex: 1; font-size: 14px; padding: 6px 12px; }
 
-  dialog { border: 0; padding: 0; width: min(980px, calc(100% - 16px)); max-height: calc(100% - 16px); background: var(--surface); color: var(--text); border-radius: 14px; }
+  dialog { margin: auto; border: 0; padding: 0; width: min(980px, calc(100% - 16px)); max-height: calc(100% - 16px); background: var(--surface); color: var(--text); border-radius: 14px; }
   dialog::backdrop { background: rgba(0,0,0,.6); }
   .viewer-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
   .viewer-head b { font-size: 15px; }
@@ -84,6 +84,20 @@
   .closeBtn { font: inherit; font-size: 22px; line-height: 1; border: 0; background: transparent; color: var(--text); cursor: pointer; width: 44px; height: 44px; border-radius: 10px; }
   .closeBtn:hover { background: var(--bg); }
   footer { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
+  .trip .mid span { display: block; }
+  /* มือถือ */
+  html { -webkit-text-size-adjust: 100%; }
+  @media (max-width: 480px) {
+    header { padding-top: 24px; }
+    .trip { grid-template-columns: 1fr 1fr; padding: 16px; }
+    .trip .mid { grid-column: 1 / -1; order: -1; text-align: left; display: flex; gap: 8px; font-size: 13px; }
+    .trip .mid .arr { display: none; }
+    .trip .tm { font-size: 26px; }
+    .grid { grid-template-columns: 1fr; }
+    .seat { min-width: 68px; padding: 4px 8px; }
+    .seat b { font-size: 18px; }
+    .viewer-body { padding: 6px; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -123,7 +137,7 @@
   <div class="viewer-head">
     <b id="viewerTitle"></b>
     <span style="display:flex; gap:6px; align-items:center">
-      <a class="btn ghost" id="viewerPdf" style="font-size:14px; min-height:36px; padding:4px 12px">⬇ PDF</a>
+      <a class="btn ghost" id="viewerPdf" style="font-size:14px; min-height:36px; padding:4px 12px; white-space:nowrap; flex-shrink:0">⬇ PDF</a>
       <button class="closeBtn" type="button" onclick="viewer.close()" aria-label="ปิด">×</button>
     </span>
   </div>
@@ -141,6 +155,8 @@ const LEGS = [
 const ITERATIONS = 310000;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const viewer = document.getElementById("viewer");
+const TH_MON = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const shortDate = d => { const [dd, mm] = String(d).split("/").map(Number); return dd && mm ? `${dd} ${TH_MON[mm - 1]}` : esc(d); };
 let STATE = {}, current = null, urls = [];
 
 function b64ToBlob(b64, type) {
@@ -179,7 +195,7 @@ function prepare(data) {
 function renderTabs() {
   document.getElementById("tabs").innerHTML = LEGS.map(l => {
     const st = STATE[l.id], t0 = st.tickets && st.tickets[0];
-    const sub = t0 ? `${esc(t0.date)} · ${esc(t0.dep)}` : st.missing ? "ยังไม่มีตั๋ว" : st.locked ? "🔒 ต้องใช้รหัส" : "เปิดไม่ได้";
+    const sub = t0 ? `${shortDate(t0.date)} · ${esc(t0.dep)}` : st.missing ? "ยังไม่มีตั๋ว" : st.locked ? "🔒 ต้องใช้รหัส" : "เปิดไม่ได้";
     return `<button class="tab" role="tab" id="tab-${l.id}" aria-selected="${l.id === current}" onclick="selectLeg('${l.id}')"><b>${l.label}</b><small>${sub}</small></button>`;
   }).join("");
 }
@@ -206,7 +222,7 @@ function selectLeg(id) {
   const total = T.reduce((s, t) => s + parseFloat(String(t.price).replace(/,/g, "")), 0);
   document.getElementById("trip").innerHTML = `
     <div><div class="st">ออก ${esc(t0.date)}</div><div class="tm">${esc(t0.dep)}</div><div class="pl">${leg.from}</div></div>
-    <div class="mid">ขบวน ${esc(t0.train)}<br>${leg.kind}<br>→</div>
+    <div class="mid"><span>ขบวน ${esc(t0.train)}</span><span>${leg.kind}</span><span class="arr">→</span></div>
     <div class="end"><div class="st">${leg.arrNote}</div><div class="tm">${esc(t0.arr)}</div><div class="pl">${leg.to}</div></div>
     <div class="meta"><span>ชั้น <b>${esc(t0.cls)}</b></span><span>ตู้ <b>${cars.join(", ")}</b></span><span><b>${T.length}</b> ที่นั่ง</span><span>รวม <b>${total.toLocaleString("th-TH")} บาท</b></span></div>`;
   document.getElementById("grid").innerHTML = T.map((t, i) => {
@@ -214,7 +230,7 @@ function selectLeg(id) {
     return `<div class="card">
       <div class="top">
         <div><div class="name">${esc(t.name)}</div><div class="tno">ตั๋ว ${esc(t.ticketNo)} · ${esc(t.price)} บาท</div></div>
-        <div class="seat ${lower ? "lower" : "upper"}"><b>${t.car}-${t.seat}</b><small>ตู้ ${t.car} · ${esc(t.berth)}</small></div>
+        <div class="seat ${lower ? "lower" : "upper"}"><b>${t.car}-${t.seat}</b><small>${esc(t.berth)}</small></div>
       </div>
       <div class="btns">
         <button class="btn" type="button" onclick="openTicket(${i})">ดูตั๋ว</button>
