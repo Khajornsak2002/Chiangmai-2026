@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ค่าใช้จ่ายทริปเชียงใหม่</title>
+<meta name="description" content="ดูว่าใครจ่ายค่าอะไรไปแล้ว ใครยังค้างอะไรบ้าง">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4ef; --surface: #ffffff; --text: #1f2a24; --muted: #66706a; --line: #e4e1d8;
+    --accent: #2f6b4f; --accent-soft: #e3efe8;
+    --paid: #2a7a52; --paid-soft: #e1f1e8;
+    --owe: #b4452a; --owe-soft: #f9e6df;
+    --info: #3d5a99; --info-soft: #e5ebf7;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614; --surface: #1b211e; --text: #e8ece9; --muted: #98a39d; --line: #2b332f;
+      --accent: #7cc4a0; --accent-soft: #1f3329;
+      --paid: #6fd0a0; --paid-soft: #183126;
+      --owe: #f09a7c; --owe-soft: #3a221b;
+      --info: #9db4ec; --info-soft: #1f2639;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Noto Sans Thai", system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  a { color: var(--accent); }
+
+  header { padding: 32px 0 8px; }
+  .back { font-size: 14px; text-decoration: none; font-weight: 600; }
+  h1 { font-size: clamp(28px, 6vw, 40px); line-height: 1.2; margin: 10px 0 4px; }
+  .sub { color: var(--muted); }
+  .sync { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: 13px; color: var(--muted); }
+  .led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .led.ok { background: #2fa36b; } .led.warn { background: #d08a1e; }
+  .edit { text-decoration: none; font-weight: 600; border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 999px; }
+
+  section { margin-top: 28px; }
+  h2 { font-size: 18px; margin-bottom: 12px; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+  .kpi .l { font-size: 13px; color: var(--muted); }
+  .kpi .v { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+  .kpi .v small { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .bar { height: 8px; border-radius: 99px; background: var(--owe-soft); overflow: hidden; margin-top: 8px; }
+  .bar i { display: block; height: 100%; background: var(--paid); border-radius: 99px; transition: width .4s; }
+
+  .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .person { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s; }
+  .person:hover { border-color: var(--accent); }
+  .person[aria-pressed="true"] { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; }
+  .person .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .person .name { font-weight: 700; font-size: 17px; }
+  .badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .badge.ok { background: var(--paid-soft); color: var(--paid); }
+  .badge.owe { background: var(--owe-soft); color: var(--owe); }
+  .person .nums { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .person .nums b { color: var(--text); font-size: 15px; }
+  .person .nums .o b { color: var(--owe); }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  .filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  .items { display: flex; flex-direction: column; gap: 8px; }
+  .item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; box-shadow: var(--shadow); }
+  .item .row1 { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+  .item .title { font-weight: 600; }
+  .item .amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .item .amt b { display: block; }
+  .item .amt small { color: var(--muted); font-size: 12.5px; }
+  .item .note { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .item .row2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: 13px; }
+  .tag { font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; }
+  .tag.paid { background: var(--paid-soft); color: var(--paid); }
+  .tag.unpaid { background: var(--owe-soft); color: var(--owe); }
+  .tag.refund { background: var(--info-soft); color: var(--info); }
+  .who { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .who span { font-size: 12px; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--line); }
+  .who .y { background: var(--paid-soft); color: var(--paid); border-color: transparent; }
+  .who .n { color: var(--owe); border-style: dashed; border-color: color-mix(in srgb, var(--owe) 50%, transparent); }
+  .empty { color: var(--muted); padding: 20px; text-align: center; background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; }
+
+  footer { color: var(--muted); font-size: 13px; text-align: center; padding: 40px 0; }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <a class="back" href="./">← กลับไปหน้าแพลนเที่ยว</a>
+  <h1>ค่าใช้จ่ายทริปเชียงใหม่</h1>
+  <p class="sub">ใครจ่ายอะไรไปแล้ว ใครยังค้างอะไรบ้าง</p>
+  <div class="sync">
+    <span id="syncStatus"><i class="led"></i>กำลังโหลดข้อมูลจาก Google Sheet…</span>
+    <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ แก้ไขใน Google Sheet</a>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<footer class="wrap">ข้อมูลอัปเดตจาก Google Sheet อัตโนมัติทุก 30 วินาที</footer>
+
+<script>
+// ====== ตั้งค่า ======
+const SHEET_ID = "1g6TUgi-lsjH7V-GZ_DfPVEWCNYqz2OyLvq09_fQpO-4";
+const SHEET_GID = "490426652";      // แท็บค่าใช้จ่าย
+const REFRESH_SEC = 30;
+// รายการที่หมายเหตุมีคำนี้ = เงินมัดจำที่ได้คืน ไม่นับรวมในยอดหาร
+const REFUND_KEYWORD = "ไม่เอาไปรวม";
+// ชื่อคน: ดึงจากหัวคอลัมน์ H–M ของแถว "รายการ" ในชีต ถ้าว่างจะใช้ "คนที่ 1–6"
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const num = s => { const n = parseFloat(String(s || "").replace(/[^\d.-]/g, "")); return isNaN(n) ? 0 : n; };
+const baht = n => n.toLocaleString("th-TH", { maximumFractionDigits: 0 }) + " ฿";
+const app = document.getElementById("app");
+document.getElementById("editLink").href = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit#gid=${SHEET_GID}`;
+
+let DATA = null, selected = null, filter = "all", lastJSON = "";
+
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+function build(rows) {
+  const h = rows.findIndex(r => (r[0] || "").trim() === "รายการ");
+  if (h < 0) throw new Error("ไม่พบแถวหัวตาราง");
+  // หาคอลัมน์ checkbox: คอลัมน์ที่มีค่า TRUE/FALSE ในแถวข้อมูล
+  const firstData = rows[h + 1] || [];
+  const checkCols = firstData.map((v, i) => /^(TRUE|FALSE)$/i.test(v.trim()) ? i : -1).filter(i => i >= 0);
+  const people = checkCols.map((c, k) => (rows[h][c] || "").trim() || `คนที่ ${k + 1}`);
+  const items = [];
+  for (let r = h + 1; r < rows.length; r++) {
+    const row = rows[r], name = (row[0] || "").trim();
+    if (name === "รวมทั้งหมด") break;
+    if (!name) continue;
+    const note = (row[4] || "").trim();
+    items.push({
+      name, note,
+      total: num(row[2]),
+      share: num(row[3]),
+      status: (row[5] || "").trim(),
+      payer: (row[6] || "").trim(),
+      refund: note.includes(REFUND_KEYWORD),
+      paid: checkCols.map(c => /^TRUE$/i.test((row[c] || "").trim())),
+    });
+  }
+  return { people, items };
+}
+
+function compute() {
+  const { people, items } = DATA;
+  const counted = items.filter(it => !it.refund);
+  const total = counted.reduce((s, it) => s + it.total, 0);
+  const perPerson = counted.reduce((s, it) => s + it.share, 0);
+  const stats = people.map((p, k) => {
+    let paid = 0, owe = 0; const oweItems = [];
+    counted.forEach(it => {
+      if (!it.share) return;
+      if (it.paid[k]) paid += it.share; else { owe += it.share; oweItems.push(it); }
+    });
+    return { name: p, paid, owe, oweItems };
+  });
+  const collected = stats.reduce((s, x) => s + x.paid, 0);
+  const unknown = counted.filter(it => !it.total).length;
+  return { total, perPerson, stats, collected, unknown };
+}
+
+function render() {
+  if (!DATA) return;
+  const { people, items } = DATA;
+  const c = compute();
+  const pct = c.total ? Math.round(c.collected / c.total * 100) : 0;
+
+  let shown = items;
+  if (selected !== null) shown = items.filter(it => !it.refund && it.share && !it.paid[selected]);
+  else if (filter === "paid") shown = items.filter(it => it.status === "จ่ายแล้ว");
+  else if (filter === "unpaid") shown = items.filter(it => it.status !== "จ่ายแล้ว");
+  else if (filter === "refund") shown = items.filter(it => it.refund);
+
+  app.innerHTML = `
+    <section>
+      <div class="kpis">
+        <div class="kpi"><div class="l">ค่าใช้จ่ายรวม</div><div class="v">${baht(c.total)}</div></div>
+        <div class="kpi"><div class="l">ตกคนละ</div><div class="v">${baht(c.perPerson)}</div></div>
+        <div class="kpi"><div class="l">เก็บแล้ว</div><div class="v">${baht(c.collected)} <small>${pct}%</small></div>
+          <div class="bar"><i style="width:${pct}%"></i></div></div>
+        <div class="kpi"><div class="l">ยังค้างรวม</div><div class="v" style="color:var(--owe)">${baht(Math.max(c.total - c.collected, 0))}</div></div>
+      </div>
+      ${c.unknown ? `<p class="hint">* มี ${c.unknown} รายการที่ยังไม่ใส่ราคา ยอดรวมจึงยังไม่ครบ</p>` : ""}
+    </section>
+
+    <section>
+      <h2>แต่ละคน</h2>
+      <div class="people">
+        ${c.stats.map((s, k) => `
+          <button class="person" aria-pressed="${selected === k}" onclick="pick(${k})">
+            <div class="top"><span class="name">${esc(s.name)}</span>
+              ${s.owe > 0.5 ? `<span class="badge owe">ค้าง ${s.oweItems.length} รายการ</span>` : `<span class="badge ok">ครบแล้ว</span>`}
+            </div>
+            <div class="nums"><span>จ่ายแล้ว <b>${baht(s.paid)}</b></span><span class="o">ค้าง <b>${baht(s.owe)}</b></span></div>
+          </button>`).join("")}
+      </div>
+      <p class="hint">แตะชื่อเพื่อดูว่าคนนั้นยังค้างค่าอะไรบ้าง</p>
+    </section>
+
+    <section>
+      <h2>${selected !== null ? `รายการที่ ${esc(people[selected])} ยังค้าง` : "รายการทั้งหมด"}</h2>
+      <div class="filter">
+        ${selected !== null
+          ? `<button class="chip" aria-pressed="true" onclick="pick(null)">✕ ดูทุกรายการ</button>`
+          : [["all", "ทั้งหมด"], ["paid", "จ่ายร้านแล้ว"], ["unpaid", "ยังไม่จ่ายร้าน"], ["refund", "มัดจำได้คืน"]]
+              .map(([k, l]) => `<button class="chip" aria-pressed="${filter === k}" onclick="setFilter('${k}')">${l}</button>`).join("")}
+      </div>
+      <div class="items">
+        ${shown.length ? shown.map(it => `
+          <div class="item">
+            <div class="row1">
+              <div><div class="title">${esc(it.name)}</div>${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}</div>
+              <div class="amt">${it.total ? `<b>${baht(it.total)}</b><small>คนละ ${baht(it.share)}</small>` : `<small>ยังไม่ใส่ราคา</small>`}</div>
+            </div>
+            <div class="row2">
+              <span class="tag ${it.status === "จ่ายแล้ว" ? "paid" : "unpaid"}">${esc(it.status || "ยังไม่จ่าย")}</span>
+              ${it.refund ? `<span class="tag refund">มัดจำ ได้คืน · ไม่นับรวม</span>` : ""}
+              ${it.payer ? `<span>สำรองจ่ายโดย <b>${esc(it.payer)}</b></span>` : ""}
+            </div>
+            ${!it.refund && it.share ? `<div class="who">${people.map((p, k) =>
+              `<span class="${it.paid[k] ? "y" : "n"}">${it.paid[k] ? "✓" : "•"} ${esc(p)}</span>`).join("")}</div>` : ""}
+          </div>`).join("")
+        : `<div class="empty">${selected !== null ? "ไม่มีรายการค้าง 🎉" : "ไม่มีรายการ"}</div>`}
+      </div>
+    </section>`;
+}
+
+function pick(k) { selected = selected === k ? null : k; render(); }
+function setFilter(k) { filter = k; render(); }
+function setStatus(kind, msg) { document.getElementById("syncStatus").innerHTML = `<i class="led ${kind}"></i>${esc(msg)}`; }
+
+async function load() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=0&gid=${SHEET_GID}&t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = build(parseCSV(await res.text()));
+    const json = JSON.stringify(data);
+    if (json !== lastJSON) { lastJSON = json; DATA = data; render(); }
+    setStatus("ok", "ข้อมูลจาก Google Sheet · อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  } catch (e) {
+    console.warn(e);
+    setStatus("warn", "โหลด Google Sheet ไม่ได้ ลองรีเฟรชอีกครั้ง");
+    if (!DATA) app.innerHTML = `<section><div class="empty">ยังโหลดข้อมูลไม่ได้</div></section>`;
+  }
+}
+load();
+setInterval(() => { if (!document.hidden) load(); }, REFRESH_SEC * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+</script>
+</body>
+</html>
