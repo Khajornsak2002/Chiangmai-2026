@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>ตั๋วรถไฟขากลับ</title>
+<title>ตั๋วรถไฟ ไป–กลับ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -51,6 +51,16 @@
   .trip .meta b { color: var(--text); }
   .note { margin-top: 12px; font-size: 13.5px; color: var(--muted); background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; }
 
+  .tabs { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+  .tab { font: inherit; border: 0; background: transparent; color: var(--muted); border-radius: 10px; padding: 8px 10px; cursor: pointer; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; }
+  .tab b { font-size: 16px; color: inherit; }
+  .tab small { font-size: 12.5px; }
+  .tab[aria-selected="true"] { background: var(--accent); color: var(--bg); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tab:disabled { opacity: .45; cursor: not-allowed; }
+  .legmsg form { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin: 12px auto 0; }
+  .legmsg input { font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .legmsg { margin-top: 24px; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 20px; text-align: center; }
   h2.sec { font-size: 18px; margin: 28px 0 12px; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
@@ -59,7 +69,7 @@
   .card .tno { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .seat { text-align: center; border-radius: 10px; padding: 4px 10px; min-width: 76px; }
   .seat b { display: block; font-size: 20px; line-height: 1.2; font-variant-numeric: tabular-nums; }
-  .seat small { font-size: 12px; font-weight: 600; }
+  .seat small { font-size: 12px; font-weight: 600; white-space: nowrap; }
   .seat.lower { background: var(--lower-soft); color: var(--lower); }
   .seat.upper { background: var(--upper-soft); color: var(--upper); }
   .card .btns { display: flex; gap: 8px; }
@@ -80,7 +90,7 @@
 <body>
 <header class="wrap">
   <a class="back" href="./">← กลับไปหน้าแพลนเที่ยว</a>
-  <h1>ตั๋วรถไฟขากลับ</h1>
+  <h1>ตั๋วรถไฟ ไป–กลับ</h1>
   <p class="sub">ตั๋วของทุกคนรวมไว้ที่เดียว ดูบนมือถือหรือดาวน์โหลด PDF ไปพิมพ์ได้</p>
 </header>
 
@@ -95,10 +105,14 @@
   </form>
 
   <div id="content" hidden>
+    <div class="tabs" role="tablist" aria-label="เลือกเที่ยว" id="tabs"></div>
+    <div class="legmsg" id="legmsg" hidden></div>
+    <div id="legBody">
     <div class="trip" id="trip"></div>
     <p class="note">⚠️ การรถไฟฯ กำหนดให้พก<b>ตั๋วที่พิมพ์ออกมา</b>ระหว่างเดินทาง ให้ดาวน์โหลด PDF ไปพิมพ์ก่อนวันเดินทาง</p>
     <h2 class="sec">ตั๋วของแต่ละคน</h2>
     <div class="grid" id="grid"></div>
+    </div>
     <p style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap">
       <button class="btn ghost" type="button" onclick="lockAgain()">🔒 ล็อกอีกครั้ง</button>
     </p>
@@ -119,11 +133,15 @@
 <footer class="wrap">ข้อมูลตั๋วเก็บแบบเข้ารหัส เปิดอ่านได้เฉพาะคนที่มีรหัสเท่านั้น</footer>
 
 <script>
-const DATA_FILE = "tickets.bin";
+// แต่ละเที่ยวเก็บเป็นไฟล์เข้ารหัสของตัวเอง ใช้รหัสเดียวกัน
+const LEGS = [
+  { id: "out", label: "ขาไป", file: "tickets-out.bin", from: "กรุงเทพอภิวัฒน์", to: "เชียงใหม่", kind: "ด่วน", arrNote: "ถึงวันถัดไป" },
+  { id: "back", label: "ขากลับ", file: "tickets.bin", from: "เชียงใหม่", to: "กรุงเทพอภิวัฒน์", kind: "ด่วนพิเศษ CNR", arrNote: "ถึงเช้าวันถัดไป" },
+];
 const ITERATIONS = 310000;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const viewer = document.getElementById("viewer");
-let TICKETS = [], urls = [];
+let STATE = {}, current = null, urls = [];
 
 function b64ToBlob(b64, type) {
   const bin = atob(b64), arr = new Uint8Array(bin.length);
@@ -131,8 +149,12 @@ function b64ToBlob(b64, type) {
   return new Blob([arr], { type });
 }
 
-async function decrypt(password) {
-  const buf = new Uint8Array(await (await fetch(DATA_FILE, { cache: "no-store" })).arrayBuffer());
+// คืนค่า null ถ้ายังไม่มีไฟล์ของเที่ยวนั้น
+async function decrypt(file, password) {
+  const res = await fetch(file, { cache: "no-store" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("โหลดไฟล์ตั๋วไม่ได้");
+  const buf = new Uint8Array(await res.arrayBuffer());
   if (new TextDecoder().decode(buf.slice(0, 4)) !== "TKT1") throw new Error("ไฟล์ตั๋วไม่ถูกต้อง");
   const salt = buf.slice(4, 20), iv = buf.slice(20, 32), data = buf.slice(32);
   const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
@@ -144,23 +166,50 @@ async function decrypt(password) {
   return JSON.parse(new TextDecoder().decode(plain));
 }
 
-function show(data) {
-  urls.forEach(URL.revokeObjectURL); urls = [];
-  TICKETS = data.tickets.map(t => {
+function prepare(data) {
+  return data.tickets.map(t => {
     const img = URL.createObjectURL(b64ToBlob(t.img, "image/jpeg"));
     const pdf = URL.createObjectURL(b64ToBlob(t.pdf, "application/pdf"));
     urls.push(img, pdf);
-    return { ...t, imgUrl: img, pdfUrl: pdf };
-  });
-  const t0 = TICKETS[0];
-  const cars = [...new Set(TICKETS.map(t => t.car))].sort((a, b) => a - b);
-  const total = TICKETS.reduce((s, t) => s + parseFloat(String(t.price).replace(/,/g, "")), 0);
+    const { img: _i, pdf: _p, ...rest } = t;
+    return { ...rest, imgUrl: img, pdfUrl: pdf };
+  }).sort((a, b) => a.car - b.car || a.seat - b.seat);
+}
+
+function renderTabs() {
+  document.getElementById("tabs").innerHTML = LEGS.map(l => {
+    const st = STATE[l.id], t0 = st.tickets && st.tickets[0];
+    const sub = t0 ? `${esc(t0.date)} · ${esc(t0.dep)}` : st.missing ? "ยังไม่มีตั๋ว" : st.locked ? "🔒 ต้องใช้รหัส" : "เปิดไม่ได้";
+    return `<button class="tab" role="tab" id="tab-${l.id}" aria-selected="${l.id === current}" onclick="selectLeg('${l.id}')"><b>${l.label}</b><small>${sub}</small></button>`;
+  }).join("");
+}
+
+function selectLeg(id) {
+  current = id;
+  try { history.replaceState(null, "", "#" + id); } catch (e) {}
+  renderTabs();
+  const leg = LEGS.find(l => l.id === id), st = STATE[id], msg = document.getElementById("legmsg"), body = document.getElementById("legBody");
+  if (!st.tickets) {
+    if (st.locked) {
+      msg.innerHTML = `ตั๋ว${leg.label}ใช้รหัสคนละตัว ใส่รหัสของตั๋ว${leg.label}เพื่อเปิด
+        <form onsubmit="event.preventDefault(); unlockLeg('${id}', this.pw.value, this.querySelector('.e'))">
+          <input type="password" name="pw" placeholder="รหัสตั๋ว${leg.label}" aria-label="รหัสตั๋ว${leg.label}" required>
+          <button class="btn" type="submit">เปิดตั๋ว${leg.label}</button>
+          <div class="err e" role="alert"></div>
+        </form>`;
+    } else msg.textContent = st.missing ? `ยังไม่ได้อัปโหลดตั๋ว${leg.label}` : `เปิดตั๋ว${leg.label}ไม่ได้: ${st.error}`;
+    msg.hidden = false; body.hidden = true; return;
+  }
+  msg.hidden = true; body.hidden = false;
+  const T = st.tickets, t0 = T[0];
+  const cars = [...new Set(T.map(t => t.car))].sort((a, b) => a - b);
+  const total = T.reduce((s, t) => s + parseFloat(String(t.price).replace(/,/g, "")), 0);
   document.getElementById("trip").innerHTML = `
-    <div><div class="st">ออก ${esc(t0.date)}</div><div class="tm">${esc(t0.dep)}</div><div class="pl">เชียงใหม่</div></div>
-    <div class="mid">ขบวน ${esc(t0.train)}<br>ด่วนพิเศษ CNR<br>→</div>
-    <div class="end"><div class="st">ถึงเช้าวันถัดไป</div><div class="tm">${esc(t0.arr)}</div><div class="pl">กรุงเทพอภิวัฒน์</div></div>
-    <div class="meta"><span>ชั้น <b>${esc(t0.cls)}</b></span><span>ตู้ <b>${cars.join(", ")}</b></span><span><b>${TICKETS.length}</b> ที่นั่ง</span><span>รวม <b>${total.toLocaleString("th-TH")} บาท</b></span></div>`;
-  document.getElementById("grid").innerHTML = TICKETS.map((t, i) => {
+    <div><div class="st">ออก ${esc(t0.date)}</div><div class="tm">${esc(t0.dep)}</div><div class="pl">${leg.from}</div></div>
+    <div class="mid">ขบวน ${esc(t0.train)}<br>${leg.kind}<br>→</div>
+    <div class="end"><div class="st">${leg.arrNote}</div><div class="tm">${esc(t0.arr)}</div><div class="pl">${leg.to}</div></div>
+    <div class="meta"><span>ชั้น <b>${esc(t0.cls)}</b></span><span>ตู้ <b>${cars.join(", ")}</b></span><span><b>${T.length}</b> ที่นั่ง</span><span>รวม <b>${total.toLocaleString("th-TH")} บาท</b></span></div>`;
+  document.getElementById("grid").innerHTML = T.map((t, i) => {
     const lower = t.berth.includes("ล่าง");
     return `<div class="card">
       <div class="top">
@@ -173,36 +222,79 @@ function show(data) {
       </div>
     </div>`;
   }).join("");
-  document.getElementById("lockForm").hidden = true;
-  document.getElementById("content").hidden = false;
 }
 
 function openTicket(i) {
-  const t = TICKETS[i];
-  document.getElementById("viewerTitle").textContent = `${t.name} · ตู้ ${t.car} ที่ ${t.seat}`;
+  const leg = LEGS.find(l => l.id === current), t = STATE[current].tickets[i];
+  document.getElementById("viewerTitle").textContent = `${leg.label} · ${t.name} · ตู้ ${t.car} ที่ ${t.seat}`;
   document.getElementById("viewerImg").src = t.imgUrl;
   const a = document.getElementById("viewerPdf"); a.href = t.pdfUrl; a.download = t.file;
   viewer.showModal();
 }
 viewer.addEventListener("click", e => { if (e.target === viewer) viewer.close(); });
 
-async function unlock(pw, remember) {
+// ก่อนวันเดินทางขาไปเสร็จ เปิดแท็บขาไป หลังจากนั้นเปิดขากลับ
+function defaultLeg() {
+  const fromHash = location.hash.slice(1);
+  if (STATE[fromHash] && STATE[fromHash].tickets) return fromHash;
+  const ok = LEGS.filter(l => STATE[l.id].tickets);
+  const out = STATE.out.tickets;
+  if (out) {
+    const [d, m, y] = out[0].date.split("/").map(Number);
+    if (new Date() < new Date(y, m - 1, d + 1, 12)) return "out";
+  }
+  return (ok.find(l => l.id === "back") || ok[0]).id;
+}
+
+const pwKey = id => "ticketPw_" + id;
+const savePw = (id, pw) => { try { localStorage.setItem(pwKey(id), pw); } catch (e) {} };
+
+// ลองรหัสทุกตัวที่มีกับทุกเที่ยว แต่ละเที่ยวใช้รหัสคนละตัวได้
+async function openLeg(leg, pws) {
+  let last = null;
+  for (const pw of pws) {
+    try {
+      const data = await decrypt(leg.file, pw);
+      if (!data) return { st: { missing: true } };
+      return { st: { tickets: prepare(data) }, pw };
+    } catch (e) { last = e; if (e.message !== "รหัสไม่ถูกต้อง") break; }
+  }
+  return { st: last && last.message === "รหัสไม่ถูกต้อง" ? { locked: true } : { error: last ? last.message : "เปิดไม่ได้" } };
+}
+
+async function unlock(pws, remember) {
   const btn = document.getElementById("unlockBtn"), err = document.getElementById("err");
   btn.disabled = true; btn.textContent = "กำลังเปิด…"; err.textContent = "";
-  try {
-    show(await decrypt(pw));
-    try { remember ? localStorage.setItem("ticketPw", pw) : localStorage.removeItem("ticketPw"); } catch (e) {}
-  } catch (e) {
-    err.textContent = e.message;
-    try { localStorage.removeItem("ticketPw"); } catch (_) {}
+  clearAll();
+  const results = await Promise.all(LEGS.map(l => openLeg(l, pws)));
+  LEGS.forEach((l, k) => { STATE[l.id] = results[k].st; if (remember && results[k].pw) savePw(l.id, results[k].pw); });
+  if (LEGS.some(l => STATE[l.id].tickets)) {
+    document.getElementById("lockForm").hidden = true;
+    document.getElementById("content").hidden = false;
+    selectLeg(defaultLeg());
+  } else {
+    err.textContent = LEGS.some(l => STATE[l.id].locked) ? "รหัสไม่ถูกต้อง" : "ไม่พบไฟล์ตั๋ว";
   }
   btn.disabled = false; btn.textContent = "เปิดดูตั๋ว";
 }
 
+async function unlockLeg(id, pw, errEl) {
+  errEl.textContent = "กำลังเปิด…";
+  const r = await openLeg(LEGS.find(l => l.id === id), [pw]);
+  if (!r.st.tickets) { errEl.textContent = r.st.locked ? "รหัสไม่ถูกต้อง" : r.st.error || "เปิดไม่ได้"; return; }
+  STATE[id] = r.st;
+  if (document.getElementById("remember").checked) savePw(id, pw);
+  selectLeg(id);
+}
+
+function clearAll() {
+  urls.forEach(URL.revokeObjectURL); urls = []; STATE = {}; current = null;
+  ["grid", "trip", "tabs"].forEach(id => document.getElementById(id).innerHTML = "");
+}
+
 function lockAgain() {
-  try { localStorage.removeItem("ticketPw"); } catch (e) {}
-  urls.forEach(URL.revokeObjectURL); urls = []; TICKETS = [];
-  document.getElementById("grid").innerHTML = ""; document.getElementById("trip").innerHTML = "";
+  try { ["ticketPw", ...LEGS.map(l => pwKey(l.id))].forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  clearAll();
   document.getElementById("content").hidden = true;
   document.getElementById("lockForm").hidden = false;
   document.getElementById("pw").value = "";
@@ -210,12 +302,12 @@ function lockAgain() {
 
 document.getElementById("lockForm").addEventListener("submit", e => {
   e.preventDefault();
-  unlock(document.getElementById("pw").value, document.getElementById("remember").checked);
+  unlock([document.getElementById("pw").value], document.getElementById("remember").checked);
 });
 
-let saved = null;
-try { saved = localStorage.getItem("ticketPw"); } catch (e) {}
-if (saved) unlock(saved, true);
+let saved = [];
+try { saved = [...new Set([...LEGS.map(l => localStorage.getItem(pwKey(l.id))), localStorage.getItem("ticketPw")].filter(Boolean))]; } catch (e) {}
+if (saved.length) unlock(saved, true);
 </script>
 </body>
 </html>
