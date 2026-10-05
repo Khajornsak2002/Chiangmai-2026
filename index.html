@@ -140,6 +140,32 @@
   .edit:hover { border-color: var(--accent); }
   footer { color: var(--muted); font-size: 13px; text-align: center; padding: 0 0 40px; }
 
+  /* โหมดแก้ไขกำหนดการ */
+  .ed-title { width: 100%; font: inherit; font-size: 20px; font-weight: 700; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); margin-top: 4px; }
+  .ed-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+  .ed-item { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; grid-template-columns: 130px 1fr 120px; gap: 8px; box-shadow: var(--shadow); }
+  .ed-item input, .ed-item select { font: inherit; font-size: 16px; min-height: 42px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); width: 100%; min-width: 0; }
+  .ed-item .f-q { grid-column: 1 / 3; font-size: 14px; }
+  .ed-item .ctl { display: flex; gap: 4px; justify-content: flex-end; }
+  .ed-item .ctl button { font: inherit; width: 40px; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; }
+  .ed-item .ctl button:disabled { opacity: .35; cursor: default; }
+  .ed-item .ctl .del { color: #b4452a; }
+  .ed-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ed-btn { font: inherit; font-size: 14px; font-weight: 600; min-height: 44px; padding: 8px 16px; border-radius: 999px; border: 1px dashed var(--accent); background: transparent; color: var(--accent); cursor: pointer; }
+  .ed-btn.danger { border-color: #b4452a; color: #b4452a; }
+  .ed-help { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .ed-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(0,0,0,.08); padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .ed-bar .in { max-width: 760px; margin: 0 auto; display: flex; gap: 8px; align-items: center; }
+  .ed-bar .msg { flex: 1; font-size: 13px; color: var(--muted); }
+  .ed-bar button { font: inherit; font-size: 15px; font-weight: 600; min-height: 44px; padding: 8px 18px; border-radius: 999px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+  .ed-bar .save { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .ed-bar button:disabled { opacity: .6; cursor: wait; }
+  body.editing main.wrap { padding-bottom: 120px; }
+  body.editing footer { display: none; }
+  button.edit { font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--accent); }
+
+  [hidden] { display: none !important; }
+
   /* มือถือ */
   html { -webkit-text-size-adjust: 100%; }
   .tab { min-height: 40px; }
@@ -154,7 +180,8 @@
     .stat b { font-size: 16px; white-space: nowrap; }
     .sync > span:last-child { width: 100%; display: grid !important; grid-template-columns: 1fr 1fr; }
     .sync > span:last-child .edit { justify-content: center; }
-    .sync > span:last-child .edit:last-child { grid-column: 1 / -1; }
+    #planEditBtn[hidden] + .edit { grid-column: 1 / -1; }
+    .sync .edit { white-space: nowrap; padding: 6px 8px; font-size: 13px; }
     .tabs { padding: 10px 0; margin: 0 -16px; padding-left: 16px; padding-right: 16px; scroll-padding: 0 16px; }
     .day-head h2 { font-size: 21px; }
     .timeline::before { left: 59px; }
@@ -164,6 +191,13 @@
     .card .title { font-size: 15px; }
     .pager button { flex: 1; font-size: 13px; padding: 10px 12px; }
     .pager button:last-child { text-align: right; }
+    .ed-item { grid-template-columns: 1fr 1fr; }
+    .ed-item .f-text { grid-column: 1 / -1; order: -1; }
+    .ed-item .f-q { grid-column: 1 / -1; }
+    .ed-item .ctl { grid-column: 1 / -1; }
+    .ed-item .ctl button { flex: 1; width: auto; }
+    .ed-bar .msg { display: none; }
+    .ed-bar button { flex: 1; }
   }
 </style>
 </head>
@@ -182,7 +216,8 @@
     <span style="display:flex;gap:8px;flex-wrap:wrap">
       <a class="edit" href="expenses.html">💰 ค่าใช้จ่าย</a>
       <a class="edit" href="tickets.html">🎫 ตั๋วรถไฟ</a>
-      <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ แก้ไขใน Google Sheet</a>
+      <button type="button" id="planEditBtn" class="edit" hidden onclick="startEdit()">📝 แก้ไขกำหนดการ</button>
+      <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ เปิด Google Sheet</a>
     </span>
   </div>
 </header>
@@ -192,6 +227,14 @@
 <main class="wrap" id="day"></main>
 
 <footer class="wrap">ขอให้ทริปนี้สนุกและปลอดภัยทุกคน 🏔️</footer>
+
+<div class="ed-bar" id="edBar" hidden>
+  <div class="in">
+    <span class="msg">กำลังแก้ไข · กดบันทึกเพื่อส่งขึ้น Google Sheet</span>
+    <button type="button" onclick="cancelEdit()">ยกเลิก</button>
+    <button type="button" class="save" id="edSave" onclick="saveEdit()">💾 บันทึก</button>
+  </div>
+</div>
 
 <script>
 // ข้อมูลสำรอง ใช้เมื่อโหลด Google Sheet ไม่ได้
@@ -279,6 +322,7 @@ const tabsEl = document.getElementById("tabs");
 const dayEl = document.getElementById("day");
 
 function render(i, scrollTab = true) {
+  if (editing) return renderEditor(i);
   const d = TRIP[i];
   [...tabsEl.children].forEach((t, j) => t.setAttribute("aria-selected", j === i));
   const t = tabsEl.children[i];
@@ -287,7 +331,7 @@ function render(i, scrollTab = true) {
     <div class="day-head">
       <div class="num">วันที่ ${i + 1} / ${TRIP.length}</div>
       <h2>${esc(d.title)}</h2>
-      <p>${esc(d.label)} 2569</p>
+      <p>${esc(d.label)} ${+d.date.slice(0, 4) + 543}</p>
     </div>
     <ol class="timeline">
       ${d.items.map(([time, title, type, q]) => `
@@ -340,27 +384,27 @@ function parseCSV(text) {
 function buildTrip(rows) {
   const head = rows[0].map(h => h.trim());
   const col = name => head.indexOf(name);
-  const cDay = col("วัน"), cTime = col("เวลา"), cText = col("กิจกรรม"), cType = col("ประเภท"), cMap = col("ค้นหาในแผนที่");
+  const cDay = col("วัน"), cTime = col("เวลา"), cText = col("กิจกรรม"), cType = col("ประเภท"), cMap = col("ค้นหาในแผนที่"), cTitle = col("หัวข้อวัน");
   if (cDay < 0 || cTime < 0 || cText < 0) throw new Error("หัวตารางไม่ตรง");
-  const days = {};
+  const days = {}, titles = {};
   for (const r of rows.slice(1)) {
     const n = parseInt(r[cDay], 10), text = (r[cText] || "").trim();
     if (!n || !text) continue;
     const time = (r[cTime] || "").trim().replace(/(\d{1,2}:\d{2}):\d{2}/g, "$1").replace(/(\d)\.(\d{2})/g, "$1:$2").replace(/\s*[-–]\s*/, "–");
     const type = TYPE_FROM_TH[(r[cType] || "").trim()] || "activity";
+    if (cTitle >= 0 && !titles[n] && (r[cTitle] || "").trim()) titles[n] = r[cTitle].trim();
     (days[n] = days[n] || []).push([time, text, type, cMap >= 0 ? (r[cMap] || "").trim() : ""]);
   }
   const nums = Object.keys(days).map(Number).sort((a, b) => a - b);
   if (!nums.length) throw new Error("ไม่มีข้อมูล");
   return nums.map(n => {
-    const d = new Date(TRIP_START.getTime() + (n - 1) * 864e5);
-    const iso = d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+    const { date: iso, label } = dayMeta(n - 1);
     const fb = FALLBACK.find(x => x.date === iso);
     const places = days[n].filter(x => x[2] === "place").map(x => x[1]);
     return {
       date: iso,
-      label: `${TH_DAYS[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]}`,
-      title: fb ? fb.title : places.slice(0, 3).join(" → ") || `วันที่ ${n}`,
+      label,
+      title: titles[n] || (fb ? fb.title : places.slice(0, 3).join(" → ") || `วันที่ ${n}`),
       items: days[n],
     };
   });
@@ -372,13 +416,19 @@ function setStatus(kind, msg) {
 
 function buildTabs() {
   tabsEl.innerHTML = "";
-  TRIP.forEach((d, i) => {
+  view().forEach((d, i) => {
     const b = document.createElement("button");
     b.className = "tab"; b.setAttribute("role", "tab");
     b.innerHTML = `วัน ${i + 1}<small>${+d.date.slice(8)} ${TH_MONTHS[+d.date.slice(5, 7) - 1]}</small>`;
     b.onclick = () => { current = i; render(i); };
     tabsEl.appendChild(b);
   });
+  if (editing) {
+    const b = document.createElement("button");
+    b.className = "tab"; b.textContent = "+ เพิ่มวัน"; b.onclick = addDay;
+    tabsEl.appendChild(b);
+    return;
+  }
   document.getElementById("placeCount").textContent =
     new Set(TRIP.flatMap(d => d.items.filter(x => x[2] === "place").map(x => x[1]))).size;
   document.querySelector(".stat b").textContent = `${TRIP.length} วัน`;
@@ -386,12 +436,14 @@ function buildTabs() {
 }
 
 async function loadSheet() {
+  if (editing || Date.now() < holdUntil) return;
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const trip = buildTrip(parseCSV(await res.text()));
     const json = JSON.stringify(trip);
+    if (editing) return;
     if (json !== lastJSON) {
       lastJSON = json; TRIP = trip;
       if (current >= TRIP.length) current = TRIP.length - 1;
@@ -403,6 +455,152 @@ async function loadSheet() {
     setStatus("warn", "โหลด Google Sheet ไม่ได้ กำลังแสดงข้อมูลสำรอง");
   }
 }
+
+// ====== แก้ไขกำหนดการบนหน้าเว็บ (ผ่าน Apps Script) ======
+// ใส่ URL เว็บแอปของสคริปต์แก้แพลน หลังกด Deploy ถ้าเว้นว่าง ปุ่มแก้ไขจะไม่แสดง
+const PLAN_API_URL = "";
+const TYPE_TH = { place: "สถานที่", travel: "เดินทาง", food: "กิน", stay: "ที่พัก", activity: "กิจกรรม" };
+let editing = false, DRAFT = null, holdUntil = 0;
+const view = () => editing ? DRAFT : TRIP;
+if (PLAN_API_URL) document.getElementById("planEditBtn").hidden = false;
+
+// คำนวณวันที่แบบไม่ขึ้นกับเขตเวลาของเครื่อง
+function dayMeta(n) {
+  const d = new Date(Date.UTC(2026, 11, 26 + n));
+  return { date: d.toISOString().slice(0, 10), label: `${TH_DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${TH_MONTHS[d.getUTCMonth()]}` };
+}
+const relabel = days => days.forEach((d, n) => Object.assign(d, dayMeta(n)));
+
+function startEdit() {
+  DRAFT = JSON.parse(JSON.stringify(TRIP));
+  editing = true; document.body.classList.add("editing");
+  document.getElementById("edBar").hidden = false;
+  buildTabs(); render(current);
+  window.scrollTo({ top: document.querySelector("nav").offsetTop });
+}
+function stopEdit() {
+  editing = false; DRAFT = null; document.body.classList.remove("editing");
+  document.getElementById("edBar").hidden = true;
+  if (current >= TRIP.length) current = TRIP.length - 1;
+  buildTabs(); render(current, false);
+}
+function cancelEdit() {
+  if (JSON.stringify(DRAFT) !== JSON.stringify(TRIP) && !confirm("ยกเลิกการแก้ไขทั้งหมด?")) return;
+  stopEdit();
+}
+
+function renderEditor(i) {
+  const d = DRAFT[i];
+  [...tabsEl.children].forEach((t, j) => t.setAttribute("aria-selected", j === i));
+  const opts = sel => Object.entries(TYPE_TH).map(([k, v]) => `<option value="${k}"${k === sel ? " selected" : ""}>${v}</option>`).join("");
+  const val = v => esc(String(v || ""));
+  dayEl.innerHTML = `
+    <div class="day-head">
+      <div class="num">แก้ไขวันที่ ${i + 1} / ${DRAFT.length} · ${esc(d.label)} ${+d.date.slice(0, 4) + 543}</div>
+      <input class="ed-title" data-title value="${val(d.title)}" placeholder="หัวข้อของวันนี้" aria-label="หัวข้อของวัน">
+    </div>
+    <ol class="ed-list">
+      ${d.items.map(([time, text, type, q], j) => `
+        <li class="ed-item" data-j="${j}">
+          <input class="f-time" data-k="0" value="${val(time)}" placeholder="09:00–10:30" aria-label="เวลา">
+          <input class="f-text" data-k="1" value="${val(text)}" placeholder="ทำอะไร / ไปไหน" aria-label="กิจกรรม">
+          <select class="f-type" data-k="2" aria-label="ประเภท">${opts(type)}</select>
+          <input class="f-q" data-k="3" value="${val(q)}" placeholder="📍 คำค้นใน Google Maps (ไม่ใส่ก็ได้)" aria-label="คำค้นในแผนที่">
+          <div class="ctl">
+            <button type="button" onclick="moveItem(${j},-1)" ${j === 0 ? "disabled" : ""} aria-label="เลื่อนขึ้น">↑</button>
+            <button type="button" onclick="moveItem(${j},1)" ${j === d.items.length - 1 ? "disabled" : ""} aria-label="เลื่อนลง">↓</button>
+            <button type="button" class="del" onclick="delItem(${j})" aria-label="ลบรายการ">🗑</button>
+          </div>
+        </li>`).join("")}
+    </ol>
+    <div class="ed-add">
+      <button type="button" class="ed-btn" onclick="addItem()">+ เพิ่มรายการ</button>
+      ${DRAFT.length > 1 ? `<button type="button" class="ed-btn danger" onclick="delDay()">ลบวันนี้</button>` : ""}
+    </div>
+    <p class="ed-help">เวลาเขียนแบบ 09:00 หรือช่วง 09:00–10:30 แก้ได้หลายวันแล้วกดบันทึกทีเดียว</p>`;
+  history.replaceState(null, "", "#day" + (i + 1));
+}
+
+dayEl.addEventListener("input", e => {
+  if (!editing) return;
+  const d = DRAFT[current], el = e.target;
+  if (el.hasAttribute("data-title")) { d.title = el.value; return; }
+  const li = el.closest(".ed-item");
+  if (li && el.dataset.k) d.items[+li.dataset.j][+el.dataset.k] = el.value;
+});
+function addItem() {
+  const items = DRAFT[current].items, last = items[items.length - 1];
+  items.push([last ? String(last[0]).split("–").pop() : "", "", "activity", ""]);
+  render(current);
+  const list = dayEl.querySelectorAll(".f-text"); list[list.length - 1].focus();
+}
+function moveItem(j, dir) {
+  const items = DRAFT[current].items;
+  [items[j], items[j + dir]] = [items[j + dir], items[j]];
+  render(current);
+}
+function delItem(j) {
+  const it = DRAFT[current].items[j];
+  if (String(it[1]).trim() && !confirm(`ลบ "${it[1]}"?`)) return;
+  DRAFT[current].items.splice(j, 1); render(current);
+}
+function addDay() {
+  DRAFT.push({ title: "", items: [["", "", "activity", ""]] });
+  relabel(DRAFT); current = DRAFT.length - 1; buildTabs(); render(current);
+}
+function delDay() {
+  if (!confirm(`ลบวันที่ ${current + 1} ทั้งวัน? วันถัดไปจะเลื่อนขึ้นมาแทน`)) return;
+  DRAFT.splice(current, 1); relabel(DRAFT);
+  current = Math.min(current, DRAFT.length - 1); buildTabs(); render(current);
+}
+
+function getPin() {
+  let pin = null;
+  try { pin = localStorage.getItem("tripPin"); } catch (e) {}
+  if (!pin) {
+    pin = prompt("ใส่รหัสทริปเพื่อแก้ไขกำหนดการ");
+    if (pin) try { localStorage.setItem("tripPin", pin); } catch (e) {}
+  }
+  return pin;
+}
+
+async function saveEdit() {
+  const days = DRAFT.map(d => ({
+    title: String(d.title || "").trim(),
+    items: d.items.filter(it => String(it[1]).trim()).map(([time, text, type, q]) =>
+      ({ time: String(time || "").trim(), text: String(text).trim(), type: TYPE_TH[type] || "กิจกรรม", map: String(q || "").trim() })),
+  }));
+  const empty = days.findIndex(d => !d.items.length);
+  if (empty >= 0) {
+    current = empty; buildTabs(); render(empty);
+    alert(`วันที่ ${empty + 1} ยังไม่มีรายการ ใส่อย่างน้อย 1 รายการ หรือกด "ลบวันนี้"`); return;
+  }
+  const pin = getPin(); if (!pin) return;
+  const btn = document.getElementById("edSave");
+  btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  try {
+    const res = await fetch(PLAN_API_URL, { method: "POST", body: JSON.stringify({ action: "savePlan", pin, days }) });
+    const j = await res.json();
+    if (!j.ok) {
+      if (j.error === "รหัสไม่ถูกต้อง") try { localStorage.removeItem("tripPin"); } catch (e) {}
+      throw new Error(j.error || "บันทึกไม่สำเร็จ");
+    }
+    DRAFT.forEach((d, n) => {
+      d.items = d.items.filter(it => String(it[1]).trim());
+      if (!String(d.title || "").trim()) d.title = `วันที่ ${n + 1}`;
+    });
+    TRIP = DRAFT; lastJSON = ""; holdUntil = Date.now() + 20000;
+    stopEdit();
+    setStatus("ok", "บันทึกกำหนดการแล้ว ✓");
+    setTimeout(loadSheet, 21000);
+  } catch (e) {
+    alert("⚠️ " + e.message);
+  }
+  btn.disabled = false; btn.textContent = "💾 บันทึก";
+}
+window.addEventListener("beforeunload", e => {
+  if (editing && JSON.stringify(DRAFT) !== JSON.stringify(TRIP)) { e.preventDefault(); e.returnValue = ""; }
+});
 
 // วันเริ่มต้น: จาก #dayN ใน URL, หรือวันปัจจุบันถ้าอยู่ระหว่างทริป
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
