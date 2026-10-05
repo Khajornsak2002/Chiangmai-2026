@@ -133,6 +133,11 @@
   }
   .pager button:disabled { visibility: hidden; }
 
+  .sync { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .led { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); margin-right: 6px; vertical-align: middle; }
+  .led.ok { background: #2fa36b; } .led.warn { background: #d08a1e; }
+  .edit { color: var(--accent); text-decoration: none; font-weight: 600; border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 999px; }
+  .edit:hover { border-color: var(--accent); }
   footer { color: var(--muted); font-size: 13px; text-align: center; padding: 0 0 40px; }
 
   @media (max-width: 480px) {
@@ -152,6 +157,10 @@
     <div class="stat"><b id="placeCount">–</b>จุดเที่ยว</div>
     <div class="stat"><b id="countdown">–</b>นับถอยหลัง</div>
   </div>
+  <div class="sync">
+    <span id="syncStatus"><i class="led"></i>กำลังโหลดข้อมูลจาก Google Sheet…</span>
+    <a id="editLink" class="edit" target="_blank" rel="noopener">✏️ แก้ไขใน Google Sheet</a>
+  </div>
 </header>
 
 <nav><div class="wrap"><div class="tabs" id="tabs" role="tablist"></div></div></nav>
@@ -161,7 +170,8 @@
 <footer class="wrap">ขอให้ทริปนี้สนุกและปลอดภัยทุกคน 🏔️</footer>
 
 <script>
-const TRIP = [
+// ข้อมูลสำรอง ใช้เมื่อโหลด Google Sheet ไม่ได้
+const FALLBACK = [
   { date: "2026-12-26", label: "ศุกร์ 26 ธ.ค.", title: "ถึงเชียงใหม่ → สวนสน → เชียงดาว", items: [
     ["12:00", "ถึงสถานีรถไฟเชียงใหม่", "place", "สถานีรถไฟเชียงใหม่"],
     ["12:20–13:30", "สถานีรถไฟ → สวนสนแม่แตง", "travel"],
@@ -244,7 +254,7 @@ const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&
 const tabsEl = document.getElementById("tabs");
 const dayEl = document.getElementById("day");
 
-function render(i) {
+function render(i, scrollTab = true) {
   const d = TRIP[i];
   [...tabsEl.children].forEach((t, j) => t.setAttribute("aria-selected", j === i));
   const t = tabsEl.children[i];
@@ -275,25 +285,110 @@ function render(i) {
     </div>`;
   history.replaceState(null, "", "#day" + (i + 1));
 }
-function go(i) { render(i); window.scrollTo({ top: document.querySelector("nav").offsetTop, behavior: "smooth" }); }
+function go(i) { current = i; render(i); window.scrollTo({ top: document.querySelector("nav").offsetTop, behavior: "smooth" }); }
 
-TRIP.forEach((d, i) => {
-  const b = document.createElement("button");
-  b.className = "tab"; b.setAttribute("role", "tab");
-  b.innerHTML = `วัน ${i + 1}<small>${d.date.slice(8)} ธ.ค.</small>`;
-  b.onclick = () => render(i);
-  tabsEl.appendChild(b);
-});
+// ====== Google Sheet ======
+const SHEET_ID = "1g6TUgi-lsjH7V-GZ_DfPVEWCNYqz2OyLvq09_fQpO-4";
+const SHEET_TAB = "แพลนเว็บ";            // ชื่อแท็บในชีต
+const REFRESH_SEC = 30;                  // ดึงข้อมูลใหม่ทุกกี่วินาที
+const TRIP_START = new Date("2026-12-26T00:00:00+07:00");
+const TH_DAYS = ["อาทิตย์","จันทร์","อังคาร","พุธ","พฤหัสบดี","ศุกร์","เสาร์"];
+const TH_MONTHS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const TYPE_FROM_TH = { "สถานที่":"place", "เดินทาง":"travel", "กิน":"food", "ที่พัก":"stay", "กิจกรรม":"activity" };
 
-document.getElementById("placeCount").textContent =
-  new Set(TRIP.flatMap(d => d.items.filter(x => x[2] === "place").map(x => x[1]))).size;
+let TRIP = FALLBACK, current = 0, lastJSON = "";
+document.getElementById("editLink").href = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`;
+
+function parseCSV(text) {
+  const rows = []; let row = [], f = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+function buildTrip(rows) {
+  const head = rows[0].map(h => h.trim());
+  const col = name => head.indexOf(name);
+  const cDay = col("วัน"), cTime = col("เวลา"), cText = col("กิจกรรม"), cType = col("ประเภท"), cMap = col("ค้นหาในแผนที่");
+  if (cDay < 0 || cTime < 0 || cText < 0) throw new Error("หัวตารางไม่ตรง");
+  const days = {};
+  for (const r of rows.slice(1)) {
+    const n = parseInt(r[cDay], 10), text = (r[cText] || "").trim();
+    if (!n || !text) continue;
+    const time = (r[cTime] || "").trim().replace(/(\d{1,2}:\d{2}):\d{2}/g, "$1").replace(/(\d)\.(\d{2})/g, "$1:$2").replace(/\s*[-–]\s*/, "–");
+    const type = TYPE_FROM_TH[(r[cType] || "").trim()] || "activity";
+    (days[n] = days[n] || []).push([time, text, type, cMap >= 0 ? (r[cMap] || "").trim() : ""]);
+  }
+  const nums = Object.keys(days).map(Number).sort((a, b) => a - b);
+  if (!nums.length) throw new Error("ไม่มีข้อมูล");
+  return nums.map(n => {
+    const d = new Date(TRIP_START.getTime() + (n - 1) * 864e5);
+    const iso = d.toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+    const fb = FALLBACK.find(x => x.date === iso);
+    const places = days[n].filter(x => x[2] === "place").map(x => x[1]);
+    return {
+      date: iso,
+      label: `${TH_DAYS[d.getDay()]} ${d.getDate()} ${TH_MONTHS[d.getMonth()]}`,
+      title: fb ? fb.title : places.slice(0, 3).join(" → ") || `วันที่ ${n}`,
+      items: days[n],
+    };
+  });
+}
+
+function setStatus(kind, msg) {
+  document.getElementById("syncStatus").innerHTML = `<i class="led ${kind}"></i>${esc(msg)}`;
+}
+
+function buildTabs() {
+  tabsEl.innerHTML = "";
+  TRIP.forEach((d, i) => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.setAttribute("role", "tab");
+    b.innerHTML = `วัน ${i + 1}<small>${+d.date.slice(8)} ${TH_MONTHS[+d.date.slice(5, 7) - 1]}</small>`;
+    b.onclick = () => { current = i; render(i); };
+    tabsEl.appendChild(b);
+  });
+  document.getElementById("placeCount").textContent =
+    new Set(TRIP.flatMap(d => d.items.filter(x => x[2] === "place").map(x => x[1]))).size;
+  document.querySelector(".stat b").textContent = `${TRIP.length} วัน`;
+  document.querySelector(".stat").lastChild.textContent = `${Math.max(TRIP.length - 1, 0)} คืน`;
+}
+
+async function loadSheet() {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(SHEET_TAB)}&t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const trip = buildTrip(parseCSV(await res.text()));
+    const json = JSON.stringify(trip);
+    if (json !== lastJSON) {
+      lastJSON = json; TRIP = trip;
+      if (current >= TRIP.length) current = TRIP.length - 1;
+      buildTabs(); render(current, false);
+    }
+    setStatus("ok", "ข้อมูลจาก Google Sheet · อัปเดต " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  } catch (e) {
+    console.warn("โหลด Google Sheet ไม่ได้:", e);
+    setStatus("warn", "โหลด Google Sheet ไม่ได้ กำลังแสดงข้อมูลสำรอง");
+  }
+}
 
 // วันเริ่มต้น: จาก #dayN ใน URL, หรือวันปัจจุบันถ้าอยู่ระหว่างทริป
 const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
-let start = TRIP.findIndex(d => d.date === today);
-const m = location.hash.match(/day(\d)/);
-if (m && TRIP[m[1] - 1]) start = m[1] - 1;
-render(Math.max(start, 0));
+current = Math.max(TRIP.findIndex(d => d.date === today), 0);
+const m = location.hash.match(/day(\d+)/);
+if (m && TRIP[m[1] - 1]) current = m[1] - 1;
+buildTabs(); render(current, false);
+loadSheet();
+setInterval(() => { if (!document.hidden) loadSheet(); }, REFRESH_SEC * 1000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadSheet(); });
 
 const diff = Math.ceil((new Date("2026-12-26T12:00:00+07:00") - Date.now()) / 864e5);
 document.getElementById("countdown").textContent =
