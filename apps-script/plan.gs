@@ -30,17 +30,15 @@ function out(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// หาแท็บแพลน: ชื่อตรงกัน → ชื่อตรงกันเมื่อไม่นับช่องว่าง → แท็บที่หัวตารางมี วัน/เวลา/กิจกรรม
+// หาแท็บ "แพลนเว็บ" (ไม่นับช่องว่าง) ถ้าไม่มีจะสร้างใหม่ให้ ไม่แตะแท็บอื่นในชีต
 function findPlanSheet(ss) {
   const norm = s => String(s).replace(/\s+/g, "").normalize("NFC");
-  const sheets = ss.getSheets().filter(s => s.getName() !== BACKUP_TAB);
-  let sh = ss.getSheetByName(TAB) || sheets.find(s => norm(s.getName()) === norm(TAB));
-  if (!sh) sh = sheets.find(s => {
-    if (s.getLastColumn() < 3) return false;
-    const head = s.getRange(1, 1, 1, s.getLastColumn()).getDisplayValues()[0].map(h => String(h).trim());
-    return ["วัน", "เวลา", "กิจกรรม"].every(c => head.indexOf(c) >= 0);
-  });
-  if (!sh) throw new Error("ไม่พบแท็บแพลน (แท็บที่มี: " + sheets.map(s => s.getName()).join(", ") + ")");
+  let sh = ss.getSheetByName(TAB) || ss.getSheets().find(s => norm(s.getName()) === norm(TAB));
+  if (!sh) {
+    sh = ss.insertSheet(TAB);
+    sh.getRange(1, 1, 1, COLS.length).setValues([COLS]).setFontWeight("bold");
+    sh.setFrozenRows(1);
+  }
   return sh;
 }
 
