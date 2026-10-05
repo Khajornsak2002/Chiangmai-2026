@@ -458,7 +458,7 @@ async function loadSheet() {
 
 // ====== แก้ไขกำหนดการบนหน้าเว็บ (ผ่าน Apps Script) ======
 // ใส่ URL เว็บแอปของสคริปต์แก้แพลน หลังกด Deploy ถ้าเว้นว่าง ปุ่มแก้ไขจะไม่แสดง
-const PLAN_API_URL = "https://script.google.com/macros/s/AKfycbwbAybpoCeiDGfc7IfPrhQ-OPk8DV6Bq_acwfW78MPxWwgKZnbTzvHk8VZz054ltoA/exec";
+const PLAN_API_URL = "https://script.google.com/macros/s/AKfycbyhOF2i-z48QyVxhoaASWxfdoNtgC88E49Sa55KDkfIXTvIGuxXTq3i4Ag8O-NzSkGs/exec";
 const TYPE_TH = { place: "สถานที่", travel: "เดินทาง", food: "กิน", stay: "ที่พัก", activity: "กิจกรรม" };
 let editing = false, DRAFT = null, holdUntil = 0;
 const view = () => editing ? DRAFT : TRIP;
@@ -594,7 +594,10 @@ async function saveEdit() {
     setStatus("ok", "บันทึกกำหนดการแล้ว ✓");
     setTimeout(loadSheet, 21000);
   } catch (e) {
-    alert("⚠️ " + e.message);
+    const net = e instanceof TypeError || /fetch|JSON/i.test(e.message);
+    alert(net
+      ? "⚠️ เชื่อมต่อสคริปต์ Google ไม่ได้\nลองเปิดลิงก์สคริปต์ในเบราว์เซอร์ดูว่าขึ้น ok หรือไม่ และตรวจว่า Deploy ตั้ง Who has access เป็น Anyone"
+      : "⚠️ " + e.message);
   }
   btn.disabled = false; btn.textContent = "💾 บันทึก";
 }
