@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ทริปเชียงใหม่ 2569</title>
+<meta name="description" content="แพลนเที่ยวเชียงใหม่กับเพื่อนๆ 26–31 ธันวาคม 2569">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --text: #1f2a24;
+    --muted: #6b756f;
+    --line: #e4e1d8;
+    --accent: #2f6b4f;
+    --accent-soft: #e3efe8;
+    --travel: #8a6d3b;
+    --travel-soft: #f3ecdf;
+    --food: #b4532a;
+    --food-soft: #f8e7df;
+    --stay: #3d5a99;
+    --stay-soft: #e5ebf7;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614;
+      --surface: #1b211e;
+      --text: #e8ece9;
+      --muted: #94a09a;
+      --line: #2b332f;
+      --accent: #7cc4a0;
+      --accent-soft: #1f3329;
+      --travel: #d4b27a;
+      --travel-soft: #2e2819;
+      --food: #ee9a74;
+      --food-soft: #35231b;
+      --stay: #9db4ec;
+      --stay-soft: #1f2639;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans Thai", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+  /* Header */
+  header { padding: 48px 0 24px; }
+  .eyebrow { color: var(--accent); font-weight: 600; font-size: 14px; letter-spacing: .02em; }
+  h1 { font-size: clamp(32px, 7vw, 48px); line-height: 1.15; font-weight: 700; margin: 6px 0 10px; }
+  .sub { color: var(--muted); font-size: 16px; }
+  .stats { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 14px; font-size: 14px; color: var(--muted);
+  }
+  .stat b { color: var(--text); font-size: 18px; display: block; line-height: 1.3; }
+
+  /* Tabs */
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    font: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .tab small { color: var(--muted); margin-left: 4px; }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .tab[aria-selected="true"] small { color: inherit; opacity: .8; }
+
+  /* Day */
+  main { padding: 24px 0 64px; }
+  .day-head { margin-bottom: 18px; }
+  .day-head .num { color: var(--accent); font-weight: 600; font-size: 14px; }
+  .day-head h2 { font-size: 24px; line-height: 1.3; }
+  .day-head p { color: var(--muted); font-size: 15px; }
+
+  .timeline { list-style: none; position: relative; }
+  .timeline::before {
+    content: ""; position: absolute; left: 83px; top: 8px; bottom: 8px; width: 2px; background: var(--line);
+  }
+  .item { display: grid; grid-template-columns: 72px 24px 1fr; gap: 0 0; align-items: start; padding: 6px 0; }
+  .time { font-size: 13px; font-weight: 600; color: var(--muted); text-align: right; padding: 12px 10px 0 0; font-variant-numeric: tabular-nums; }
+  .dot {
+    width: 12px; height: 12px; border-radius: 50%; margin: 16px auto 0; position: relative; z-index: 1;
+    background: var(--surface); border: 2px solid var(--accent);
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px 14px; box-shadow: var(--shadow); margin-left: 6px;
+  }
+  .card .title { font-weight: 500; font-size: 15.5px; }
+  .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; font-weight: 500; }
+  .map { font-size: 12.5px; color: var(--accent); text-decoration: none; }
+  .map:hover { text-decoration: underline; }
+
+  .t-place .dot { background: var(--accent); }
+  .t-place .card { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+  .t-place .title { font-weight: 600; }
+  .tag.place { background: var(--accent-soft); color: var(--accent); }
+  .t-travel .dot { border-color: var(--travel); }
+  .t-travel .card { background: transparent; box-shadow: none; border-style: dashed; }
+  .t-travel .title { color: var(--muted); }
+  .tag.travel { background: var(--travel-soft); color: var(--travel); }
+  .t-food .dot { border-color: var(--food); }
+  .tag.food { background: var(--food-soft); color: var(--food); }
+  .t-stay .dot { background: var(--stay); border-color: var(--stay); }
+  .t-stay .card { background: var(--stay-soft); border-color: transparent; }
+  .t-stay .title { font-weight: 600; }
+  .tag.stay { background: var(--surface); color: var(--stay); }
+  .tag.activity { background: var(--bg); color: var(--muted); }
+
+  .pager { display: flex; justify-content: space-between; gap: 10px; margin-top: 28px; }
+  .pager button {
+    font: inherit; font-size: 14px; background: var(--surface); color: var(--text);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; cursor: pointer;
+  }
+  .pager button:disabled { visibility: hidden; }
+
+  footer { color: var(--muted); font-size: 13px; text-align: center; padding: 0 0 40px; }
+
+  @media (max-width: 480px) {
+    .timeline::before { left: 67px; }
+    .item { grid-template-columns: 56px 24px 1fr; }
+    .time { font-size: 12px; padding-right: 6px; }
+  }
+</style>
+</head>
+<body>
+<header class="wrap">
+  <div class="eyebrow">🌲 ทริปกับเพื่อนๆ</div>
+  <h1>เที่ยวเชียงใหม่ ส่งท้ายปี 2569</h1>
+  <p class="sub">26 – 31 ธันวาคม 2569 · เชียงดาว · ม่อนแจ่ม · ดอยอินทนนท์ · แม่กำปอง · ในเมือง</p>
+  <div class="stats">
+    <div class="stat"><b>6 วัน</b>5 คืน</div>
+    <div class="stat"><b id="placeCount">–</b>จุดเที่ยว</div>
+    <div class="stat"><b id="countdown">–</b>นับถอยหลัง</div>
+  </div>
+</header>
+
+<nav><div class="wrap"><div class="tabs" id="tabs" role="tablist"></div></div></nav>
+
+<main class="wrap" id="day"></main>
+
+<footer class="wrap">ขอให้ทริปนี้สนุกและปลอดภัยทุกคน 🏔️</footer>
+
+<script>
+const TRIP = [
+  { date: "2026-12-26", label: "ศุกร์ 26 ธ.ค.", title: "ถึงเชียงใหม่ → สวนสน → เชียงดาว", items: [
+    ["12:00", "ถึงสถานีรถไฟเชียงใหม่", "place", "สถานีรถไฟเชียงใหม่"],
+    ["12:20–13:30", "สถานีรถไฟ → สวนสนแม่แตง", "travel"],
+    ["13:30", "สวนสนแม่แตง (สวนผลิตเมล็ดพันธุ์ไม้สนสองใบ)", "place", "สวนผลิตเมล็ดพันธุ์ไม้สนสองใบ แม่แตง"],
+    ["13:30–14:20", "เที่ยวสวนสน / ถ่ายรูป", "activity"],
+    ["14:20–15:20", "สวนสน → บ้านดอยนับดาว", "travel"],
+    ["15:20–16:00", "แวะซื้อของกิน", "food"],
+    ["16:00–17:00", "เดินทางเข้าที่พัก", "travel"],
+    ["17:00", "บ้านดอยนับดาว ดอยหลวง เชียงดาว", "stay", "บ้านดอยนับดาว เชียงดาว"],
+  ]},
+  { date: "2026-12-27", label: "เสาร์ 27 ธ.ค.", title: "ไร่แกะ → จังเกิ้ลโคสเตอร์ → ม่อนแจ่ม", items: [
+    ["09:00", "ออกเดินทางจากบ้านดอยนับดาว", "activity"],
+    ["09:00–10:40", "เชียงดาว → ไร่ปางแกะเมอร์ริโน่", "travel"],
+    ["10:40", "ไร่ปางแกะเมอร์ริโน่", "place", "ไร่ปางแกะเมอร์ริโน่"],
+    ["10:40–12:00", "ให้อาหารแกะ / ถ่ายรูป", "activity"],
+    ["12:00–12:30", "กินข้าว", "food"],
+    ["12:30–12:50", "ไปโป่งแยง Jungle Coaster", "travel"],
+    ["13:00", "โป่งแยง จังเกิ้ล โคสเตอร์", "place", "Pongyang Jungle Coaster"],
+    ["15:20–17:00", "เดินทางไปที่พัก", "travel"],
+    ["17:00", "ถึงบ้านภูต้นซ้อ ม่อนแจ่ม", "stay", "บ้านภูต้นซ้อ ม่อนแจ่ม"],
+  ]},
+  { date: "2026-12-28", label: "อาทิตย์ 28 ธ.ค.", title: "ดอยปุย → ดอยสุเทพ → อ่างแก้ว → อินทนนท์", items: [
+    ["09:00", "ออกจากบ้านภูต้นซ้อ ม่อนแจ่ม", "activity"],
+    ["09:00–10:20", "ม่อนแจ่ม → จุดชมวิวดอยปุย", "travel"],
+    ["10:20", "จุดชมวิวดอยปุย", "place", "จุดชมวิวดอยปุย"],
+    ["10:20–11:00", "ถ่ายรูป / ชมวิว", "activity"],
+    ["11:00–11:30", "ดอยปุย → ดอยสุเทพ", "travel"],
+    ["11:30", "วัดพระธาตุดอยสุเทพราชวรวิหาร", "place", "วัดพระธาตุดอยสุเทพราชวรวิหาร"],
+    ["11:30–12:20", "เดินเล่น / ถ่ายรูป", "activity"],
+    ["12:20–12:50", "ดอยสุเทพ → อ่างแก้ว มช.", "travel"],
+    ["12:50", "อ่างแก้ว มช.", "place", "อ่างแก้ว มหาวิทยาลัยเชียงใหม่"],
+    ["12:50–13:30", "เดินเล่น / ถ่ายรูป", "activity"],
+    ["14:00–14:20", "อ่างแก้ว → สวนสาธารณะ อบจ.", "travel"],
+    ["14:20", "สวนสาธารณะ อบจ.เชียงใหม่", "place", "สวนสาธารณะ อบจ.เชียงใหม่"],
+    ["14:20–15:00", "เดินเล่น", "activity"],
+    ["15:00–17:00", "สวน อบจ. → ดอยอินทนนท์", "travel"],
+    ["17:00", "ลานกางเต็นท์ ดอยอินทนนท์", "stay", "ลานกางเต็นท์ ดอยอินทนนท์"],
+  ]},
+  { date: "2026-12-29", label: "จันทร์ 29 ธ.ค.", title: "กิ่วแม่ปาน → ผาช่อ → แม่กำปอง", items: [
+    ["07:30–08:00", "กินข้าว / เตรียมตัว", "food"],
+    ["08:00", "ออกจากดอยอินทนนท์", "activity"],
+    ["08:20", "ถึงกิ่วแม่ปาน", "place", "เส้นทางศึกษาธรรมชาติกิ่วแม่ปาน"],
+    ["08:20–10:30", "เดินกิ่วแม่ปาน", "activity"],
+    ["10:30", "ออกจากกิ่วแม่ปาน", "activity"],
+    ["10:30–12:00", "ดอยอินทนนท์ → ผาช่อ", "travel"],
+    ["12:00", "ถึงผาช่อ อุทยานแห่งชาติแม่วาง", "place", "ผาช่อ อุทยานแห่งชาติแม่วาง"],
+    ["13:45–16:15", "ผาช่อ → แม่กำปอง", "travel"],
+    ["16:15–16:30", "ถึงแม่กำปอง", "place", "หมู่บ้านแม่กำปอง"],
+    ["16:30–18:30", "เดินเที่ยวแม่กำปอง", "activity"],
+    ["18:30–20:00", "แม่กำปอง → โรงแรมในเมือง", "travel"],
+    ["20:00", "นอนโรงแรมในเมืองเชียงใหม่", "stay"],
+  ]},
+  { date: "2026-12-30", label: "อังคาร 30 ธ.ค.", title: "ต้นฉำฉากลางน้ำ → ท่าแพ → คลองแม่ข่า → กลับ", items: [
+    ["04:30", "ออกเดินทาง", "activity"],
+    ["04:30–06:00", "โรงแรม → ท่าเรือเขื่อนแม่งัด", "travel"],
+    ["06:00", "ถึงท่าเรือต้นฉำฉากลางน้ำ", "place", "ต้นฉำฉากลางน้ำ เขื่อนแม่งัด"],
+    ["06:00–06:20", "นั่งเรือ", "travel"],
+    ["06:20", "ถึงต้นฉำฉากลางน้ำ", "place"],
+    ["06:20–07:30", "ชมวิว / ถ่ายรูป", "activity"],
+    ["07:30–07:50", "กลับท่าเรือ", "travel"],
+    ["07:50–09:20", "กลับเชียงใหม่", "travel"],
+    ["09:20–10:30", "กินข้าว / พัก", "food"],
+    ["11:00", "Check out โรงแรมในเมืองเชียงใหม่", "stay"],
+    ["11:00–11:30", "โรงแรม → ประตูท่าแพ", "travel"],
+    ["11:30", "ถึงประตูท่าแพ", "place", "ประตูท่าแพ เชียงใหม่"],
+    ["11:30–13:30", "กินข้าว / เที่ยว", "food"],
+    ["14:30", "ออกจากประตูท่าแพ", "activity"],
+    ["15:00–16:30", "เดินเที่ยวคลองแม่ข่า", "place", "คลองแม่ข่า เชียงใหม่"],
+    ["17:00", "สถานีรถไฟเชียงใหม่ กลับ กทม.", "place", "สถานีรถไฟเชียงใหม่"],
+    ["18:40", "รถไฟออกจากสถานีเชียงใหม่", "travel"],
+  ]},
+  { date: "2026-12-31", label: "พุธ 31 ธ.ค.", title: "ถึงกรุงเทพฯ", items: [
+    ["06:30", "ถึงสถานีกลางกรุงเทพอภิวัฒน์", "place", "สถานีกลางกรุงเทพอภิวัฒน์"],
+    ["08:30", "แยกย้ายกลับบ้าน", "activity"],
+  ]},
+];
+
+const TAGS = { place: "สถานที่", travel: "เดินทาง", food: "กิน", stay: "ที่พัก", activity: "กิจกรรม" };
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const tabsEl = document.getElementById("tabs");
+const dayEl = document.getElementById("day");
+
+function render(i) {
+  const d = TRIP[i];
+  [...tabsEl.children].forEach((t, j) => t.setAttribute("aria-selected", j === i));
+  const t = tabsEl.children[i];
+  tabsEl.scrollTo({ left: t.offsetLeft - (tabsEl.clientWidth - t.offsetWidth) / 2, behavior: "smooth" });
+  dayEl.innerHTML = `
+    <div class="day-head">
+      <div class="num">วันที่ ${i + 1} / ${TRIP.length}</div>
+      <h2>${esc(d.title)}</h2>
+      <p>${esc(d.label)} 2569</p>
+    </div>
+    <ol class="timeline">
+      ${d.items.map(([time, title, type, q]) => `
+        <li class="item t-${type}">
+          <div class="time">${time.replace("–", "<br>")}</div>
+          <div class="dot"></div>
+          <div class="card">
+            <div class="title">${esc(title)}</div>
+            <div class="meta">
+              <span class="tag ${type}">${TAGS[type]}</span>
+              ${q ? `<a class="map" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}">📍 แผนที่</a>` : ""}
+            </div>
+          </div>
+        </li>`).join("")}
+    </ol>
+    <div class="pager">
+      <button ${i === 0 ? "disabled" : ""} onclick="go(${i - 1})">← ${i > 0 ? esc(TRIP[i - 1].label) : ""}</button>
+      <button ${i === TRIP.length - 1 ? "disabled" : ""} onclick="go(${i + 1})">${i < TRIP.length - 1 ? esc(TRIP[i + 1].label) : ""} →</button>
+    </div>`;
+  history.replaceState(null, "", "#day" + (i + 1));
+}
+function go(i) { render(i); window.scrollTo({ top: document.querySelector("nav").offsetTop, behavior: "smooth" }); }
+
+TRIP.forEach((d, i) => {
+  const b = document.createElement("button");
+  b.className = "tab"; b.setAttribute("role", "tab");
+  b.innerHTML = `วัน ${i + 1}<small>${d.date.slice(8)} ธ.ค.</small>`;
+  b.onclick = () => render(i);
+  tabsEl.appendChild(b);
+});
+
+document.getElementById("placeCount").textContent =
+  new Set(TRIP.flatMap(d => d.items.filter(x => x[2] === "place").map(x => x[1]))).size;
+
+// วันเริ่มต้น: จาก #dayN ใน URL, หรือวันปัจจุบันถ้าอยู่ระหว่างทริป
+const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+let start = TRIP.findIndex(d => d.date === today);
+const m = location.hash.match(/day(\d)/);
+if (m && TRIP[m[1] - 1]) start = m[1] - 1;
+render(Math.max(start, 0));
+
+const diff = Math.ceil((new Date("2026-12-26T12:00:00+07:00") - Date.now()) / 864e5);
+document.getElementById("countdown").textContent =
+  diff > 0 ? `อีก ${diff} วัน` : (today <= "2026-12-31" ? "กำลังเที่ยว!" : "จบทริปแล้ว");
+</script>
+</body>
+</html>
