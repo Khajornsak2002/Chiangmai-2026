@@ -2,8 +2,6 @@
  * สคริปต์บันทึกกำหนดการจากหน้าเว็บ ลงแท็บ "แพลนเว็บ"
  * เป็นสคริปต์แยกจากของหน้าค่าใช้จ่าย ไม่กระทบของเดิม
  *
- * ไฟล์ pay.gs (ช่องทางรับเงินของหน้าค่าใช้จ่าย) ต้องอยู่ในโปรเจกต์เดียวกันด้วย
- *
  * ก่อนบันทึกทุกครั้ง จะสำรองข้อมูลเดิมไว้ในแท็บ "แพลนเว็บ_สำรอง"
  */
 const SHEET_ID = "1g6TUgi-lsjH7V-GZ_DfPVEWCNYqz2OyLvq09_fQpO-4";
@@ -13,8 +11,7 @@ const PIN = "ใส่รหัสทริปตรงนี้";   // ← ใ�
 const TYPES = ["สถานที่", "เดินทาง", "กิน", "ที่พัก", "กิจกรรม"];
 const COLS = ["วัน", "เวลา", "กิจกรรม", "ประเภท", "ค้นหาในแผนที่", "หัวข้อวัน"];
 
-function doGet(e) {
-  if (e && e.parameter && e.parameter.action === "pay") return out(getPay());   // อยู่ใน pay.gs
+function doGet() {
   return out({ ok: true, msg: "plan api พร้อมใช้งาน" });
 }
 
@@ -23,7 +20,6 @@ function doPost(e) {
     const req = JSON.parse(e.postData.contents);
     if (String(req.pin || "") !== PIN) return out({ ok: false, error: "รหัสไม่ถูกต้อง" });
     if (req.action === "savePlan") return out(savePlan(req.days));
-    if (req.action === "savePay") return out(savePay(req));   // อยู่ใน pay.gs
     return out({ ok: false, error: "ไม่รู้จักคำสั่ง" });
   } catch (err) {
     return out({ ok: false, error: String(err && err.message || err) });

@@ -514,8 +514,8 @@ document.getElementById("addForm").addEventListener("submit", async ev => {
 });
 
 // ====== ชำระเงิน: ใครต้องโอนให้ใคร + QR / เลขบัญชีของแต่ละคน ======
-// ใช้สคริปต์เดียวกับหน้าแพลน (apps-script/plan.gs + pay.gs) เก็บในแท็บ "บัญชีรับเงิน"
-const PAY_API_URL = "https://script.google.com/macros/s/AKfycbz2HIZTIlmDUfSd8p3SE484pODAWHzm_OzAJLpzYUdCgBN3sHKtK65F3DD_kMlhqsb-/exec";
+// ใช้สคริปต์เดียวกับหน้านี้ (apps-script/expenses.gs + pay.gs) เก็บในแท็บ "บัญชีรับเงิน"
+const PAY_API_URL = WEB_APP_URL;
 const QR_MAX = 44000;   // ขนาดรูปสูงสุด (ตัวอักษร) หนึ่งช่องในชีตเก็บได้ 50,000
 const payDialog = document.getElementById("payDialog");
 const infoDialog = document.getElementById("infoDialog");
