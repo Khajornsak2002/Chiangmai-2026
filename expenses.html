@@ -53,9 +53,42 @@
   .bar i { display: block; height: 100%; background: var(--paid); border-radius: 99px; transition: width .4s; }
 
   .people { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-  .person { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s; }
+  .person { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); display: flex; flex-direction: column; transition: border-color .15s; }
   .person:hover { border-color: var(--accent); }
-  .person[aria-pressed="true"] { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; }
+  .person.sel { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; }
+  .person .pmain { font: inherit; color: inherit; background: none; border: 0; text-align: left; padding: 14px 16px 10px; cursor: pointer; border-radius: 14px 14px 0 0; flex: 1; }
+  .person .pact { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 16px 12px; }
+  .mini { font: inherit; font-size: 12.5px; font-weight: 600; padding: 3px 11px; min-height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
+  .mini.pay { background: var(--owe); border-color: var(--owe); color: #fff; }
+  .mini.has { background: var(--paid-soft); border-color: transparent; color: var(--paid); }
+
+  .debts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .debt, .payto { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; }
+  .debt .top, .payto .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .debt .name, .payto .name { font-weight: 700; font-size: 17px; }
+  .debt .sum, .payto .big { color: var(--owe); font-variant-numeric: tabular-nums; font-size: 18px; }
+  .debt ul, .payto ul { list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+  .debt li, .payto li { display: flex; justify-content: space-between; gap: 10px; }
+  .debt li > span:last-child, .payto li > span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+  .debt li.pend { color: var(--muted); }
+  .debt .btn { align-self: flex-start; margin-top: auto; }
+  .btn.pay { background: var(--owe); border-color: var(--owe); color: #fff; }
+  .payto ul { font-size: 13px; color: var(--muted); }
+  .payto li small { font-size: 12px; }
+  .recv { display: flex; flex-direction: column; gap: 6px; align-items: stretch; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .recv.none { flex-direction: row; justify-content: space-between; align-items: center; color: var(--muted); font-size: 13px; }
+  .recv .mini { align-self: flex-start; }
+  img.qr { display: block; width: 100%; max-width: 260px; margin: 0 auto; border-radius: 10px; background: #fff; padding: 6px; border: 1px solid var(--line); }
+  .copy { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--bg); border-radius: 10px; padding: 6px 10px; }
+  .copy > span { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+  .copy small { color: var(--muted); font-size: 12px; }
+  .copy b { font-size: 16px; font-variant-numeric: tabular-nums; letter-spacing: .02em; overflow-wrap: anywhere; }
+  .dlg { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .dhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .x { font: inherit; font-size: 16px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); cursor: pointer; flex: none; }
+  .qrpick { display: flex; flex-direction: column; gap: 8px; }
+  .qrpick .actions { justify-content: flex-start; }
+  label.btn { display: inline-flex; align-items: center; }
   .person .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .person .name { font-weight: 700; font-size: 17px; }
   .badge { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
@@ -122,7 +155,10 @@
     .kpi { padding: 12px; }
     .kpi .v { font-size: 20px; }
     .people { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .person { padding: 12px; }
+    .person .pmain { padding: 12px 12px 8px; }
+    .person .pact { padding: 0 12px 10px; }
+    .debts { grid-template-columns: 1fr; gap: 8px; }
+    .dlg { padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
     .person .top { flex-direction: column; align-items: flex-start; gap: 4px; }
     .person .nums { flex-direction: column; gap: 0; }
     .filter { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px 2px; scrollbar-width: none; }
@@ -168,6 +204,37 @@
     <div class="formbtns">
       <button class="btn ghost" type="button" onclick="addDialog.close()">ยกเลิก</button>
       <button class="btn" type="submit" id="saveBtn">บันทึก</button>
+    </div>
+  </form>
+</dialog>
+<dialog id="payDialog"><div class="dlg" id="payBody"></div></dialog>
+
+<dialog id="infoDialog">
+  <form id="infoForm" method="dialog">
+    <h3 id="infoTitle">ช่องทางรับเงิน</h3>
+    <p class="hint" style="margin:0">เพื่อนจะเห็น QR / เลขบัญชีนี้ตอนกด "ชำระเงิน" เพื่อโอนให้คุณ</p>
+    <div class="field">QR Code รับเงิน
+      <div class="qrpick">
+        <img id="qrPreview" class="qr" alt="QR รับเงิน" hidden>
+        <span id="qrNone" class="hint" style="margin:0">ยังไม่มีรูป · ครอปให้เหลือแค่ QR จะสแกนง่ายกว่า</span>
+        <span class="actions">
+          <label class="btn ghost">📷 เลือกรูป QR<input type="file" id="qrFile" accept="image/*" hidden></label>
+          <button type="button" class="btn ghost" id="qrClear" hidden>ลบรูป</button>
+        </span>
+      </div>
+    </div>
+    <label class="field">ธนาคาร<input type="text" name="bank" list="banks" placeholder="เช่น กสิกรไทย"></label>
+    <label class="field">เลขบัญชี<input type="text" name="account" inputmode="numeric" placeholder="เช่น 123-4-56789-0"></label>
+    <label class="field">ชื่อบัญชี<input type="text" name="accName"></label>
+    <label class="field">พร้อมเพย์ (เบอร์โทร / เลขบัตรประชาชน)<input type="text" name="promptpay" inputmode="numeric"></label>
+    <datalist id="banks">
+      <option>กสิกรไทย</option><option>ไทยพาณิชย์</option><option>กรุงเทพ</option><option>กรุงไทย</option>
+      <option>กรุงศรีอยุธยา</option><option>ทหารไทยธนชาต (ttb)</option><option>ออมสิน</option><option>ธ.ก.ส.</option>
+      <option>ยูโอบี</option><option>ซีไอเอ็มบี ไทย</option><option>แลนด์ แอนด์ เฮ้าส์</option><option>เกียรตินาคินภัทร</option>
+    </datalist>
+    <div class="formbtns">
+      <button class="btn ghost" type="button" onclick="infoDialog.close()">ยกเลิก</button>
+      <button class="btn" type="submit" id="infoSave">บันทึก</button>
     </div>
   </form>
 </dialog>
@@ -261,6 +328,8 @@ function render() {
   const { people, items } = DATA;
   const c = compute();
   const pct = c.total ? Math.round(c.collected / c.total * 100) : 0;
+  const D = debts();
+  const owing = people.map((_, k) => k).filter(k => D[k].total > 0.5 || D[k].pending > 0.5);
 
   let shown = items;
   if (selected !== null) shown = items.filter(it => !it.refund && it.share && !it.paid[selected]);
@@ -284,14 +353,35 @@ function render() {
       <h2>แต่ละคน</h2>
       <div class="people">
         ${c.stats.map((s, k) => `
-          <button class="person" aria-pressed="${selected === k}" onclick="pick(${k})">
-            <div class="top"><span class="name">${esc(s.name)}</span>
-              ${s.owe > 0.5 ? `<span class="badge owe">ค้าง ${s.oweItems.length} รายการ</span>` : `<span class="badge ok">ครบแล้ว</span>`}
+          <div class="person${selected === k ? " sel" : ""}">
+            <button class="pmain" type="button" aria-pressed="${selected === k}" onclick="pick(${k})">
+              <div class="top"><span class="name">${esc(s.name)}</span>
+                ${s.owe > 0.5 ? `<span class="badge owe">ค้าง ${s.oweItems.length} รายการ</span>` : `<span class="badge ok">ครบแล้ว</span>`}
+              </div>
+              <div class="nums"><span>จ่ายแล้ว <b>${baht(s.paid)}</b></span><span class="o">ค้าง <b>${baht(s.owe)}</b></span></div>
+            </button>
+            <div class="pact">
+              ${D[k].total > 0.5 ? `<button class="mini pay" type="button" onclick="openPay(${k})">💸 ชำระเงิน</button>` : ""}
+              <button class="mini${hasInfo(PAY[s.name]) ? " has" : ""}" type="button" data-name="${esc(s.name)}" onclick="openPayInfo(this.dataset.name)">${hasInfo(PAY[s.name]) ? "🏦 บัญชีรับเงิน ✓" : "+ QR / เลขบัญชี"}</button>
             </div>
-            <div class="nums"><span>จ่ายแล้ว <b>${baht(s.paid)}</b></span><span class="o">ค้าง <b>${baht(s.owe)}</b></span></div>
-          </button>`).join("")}
+          </div>`).join("")}
       </div>
-      <p class="hint">แตะชื่อเพื่อดูว่าคนนั้นยังค้างค่าอะไรบ้าง</p>
+      <p class="hint">แตะชื่อเพื่อดูว่าคนนั้นยังค้างค่าอะไรบ้าง · กด "+ QR / เลขบัญชี" เพื่อใส่ช่องทางรับเงินของตัวเอง</p>
+    </section>
+
+    <section>
+      <h2>ใครต้องโอนให้ใคร</h2>
+      ${owing.length ? `<div class="debts">${owing.map(k => `
+        <div class="debt">
+          <div class="top"><span class="name">${esc(people[k])}</span>${D[k].total > 0.5 ? `<b class="sum">${baht(D[k].total)}</b>` : ""}</div>
+          <ul>
+            ${D[k].to.map(g => `<li><span>→ โอนให้ <b>${esc(g.name)}</b>${hasInfo(PAY[g.name]) ? " 🏦" : ""}</span><span>${baht(g.amount)}</span></li>`).join("")}
+            ${D[k].pending > 0.5 ? `<li class="pend"><span>ยังไม่ระบุคนสำรองจ่าย</span><span>${baht(D[k].pending)}</span></li>` : ""}
+          </ul>
+          ${D[k].total > 0.5 ? `<button class="btn pay" type="button" onclick="openPay(${k})">💸 ชำระเงิน</button>` : ""}
+        </div>`).join("")}</div>`
+        : `<div class="empty">ไม่มีใครต้องโอนให้ใครแล้ว 🎉</div>`}
+      <p class="hint">คิดจากรายการที่ยังไม่ติ๊กว่าจ่าย โดยโอนให้คนที่สำรองจ่ายรายการนั้น (🏦 = มี QR / เลขบัญชีแล้ว)</p>
     </section>
 
     <section>
@@ -323,6 +413,7 @@ function render() {
         : `<div class="empty">${selected !== null ? "ไม่มีรายการค้าง 🎉" : "ไม่มีรายการ"}</div>`}
       </div>
     </section>`;
+  if (payDialog.open) renderPay();
 }
 
 function pick(k) { selected = selected === k ? null : k; render(); }
@@ -349,17 +440,19 @@ function getPin() {
   }
   return pin;
 }
-async function api(payload) {
+async function api(payload, url = WEB_APP_URL) {
   const pin = getPin();
   if (!pin) throw new Error("ยังไม่ได้ใส่รหัส");
-  const res = await fetch(WEB_APP_URL, { method: "POST", body: JSON.stringify({ ...payload, pin }) });
+  const res = await fetch(url, { method: "POST", body: JSON.stringify({ ...payload, pin }) });
   const j = await res.json();
   if (!j.ok) {
     if (j.error === "รหัสไม่ถูกต้อง") try { localStorage.removeItem("tripPin"); } catch (e) {}
     throw new Error(j.error || "บันทึกไม่สำเร็จ");
   }
-  holdUntil = Date.now() + 20000;
-  setTimeout(load, 21000);
+  if (url === WEB_APP_URL) {
+    holdUntil = Date.now() + 20000;
+    setTimeout(load, 21000);
+  }
   return j;
 }
 
@@ -420,6 +513,198 @@ document.getElementById("addForm").addEventListener("submit", async ev => {
   btn.disabled = false; btn.textContent = "บันทึก";
 });
 
+// ====== ชำระเงิน: ใครต้องโอนให้ใคร + QR / เลขบัญชีของแต่ละคน ======
+// ใช้สคริปต์เดียวกับหน้าแพลน (apps-script/plan.gs + pay.gs) เก็บในแท็บ "บัญชีรับเงิน"
+const PAY_API_URL = "https://script.google.com/macros/s/AKfycbz2HIZTIlmDUfSd8p3SE484pODAWHzm_OzAJLpzYUdCgBN3sHKtK65F3DD_kMlhqsb-/exec";
+const QR_MAX = 44000;   // ขนาดรูปสูงสุด (ตัวอักษร) หนึ่งช่องในชีตเก็บได้ 50,000
+const payDialog = document.getElementById("payDialog");
+const infoDialog = document.getElementById("infoDialog");
+let PAY = {}, payJSON = "", payFor = null, infoName = null, infoQR = "";
+
+const hasInfo = i => !!(i && (i.qr || i.account || i.promptpay));
+const safeQR = s => /^data:image\/(png|jpeg|webp);base64,/.test(s || "") ? s : "";
+
+// คนสำรองจ่ายอาจใส่หลายคน เช่น "อ้น, โมส"
+function splitPayers(s) {
+  const names = String(s || "").split(/\s*(?:,|，|、|\/|\+|&|และ)\s*/).map(x => x.trim()).filter(Boolean)
+    .map(n => DATA.people.find(p => p === n) || DATA.people.find(p => n.includes(p)) || n);
+  return [...new Set(names)];
+}
+
+// ยอดที่แต่ละคนต้องโอนให้คนสำรองจ่าย จากส่วนที่ยังไม่ได้ติ๊กว่าจ่าย
+function debts() {
+  const { people, items } = DATA;
+  const res = people.map(() => ({ total: 0, to: [], pending: 0 }));
+  items.forEach((it, ix) => {
+    if (it.refund || !it.share) return;
+    const payers = splitPayers(it.payer);
+    people.forEach((p, k) => {
+      if (it.paid[k] || payers.includes(p)) return;   // จ่ายแล้ว หรือเป็นส่วนของคนสำรองจ่ายเอง
+      const r = res[k];
+      if (!payers.length) { r.pending += it.share; return; }
+      const amt = it.share / payers.length;
+      payers.forEach(name => {
+        let g = r.to.find(g => g.name === name);
+        if (!g) r.to.push(g = { name, amount: 0, items: [] });
+        g.amount += amt;
+        g.items.push({ ix, amt, with: payers.filter(x => x !== name) });
+      });
+      r.total += it.share;
+    });
+  });
+  res.forEach(r => r.to.sort((a, b) => b.amount - a.amount));
+  return res;
+}
+
+function copyRow(label, value) {
+  return `<div class="copy"><span><small>${label}</small><b>${esc(value)}</b></span>
+    <button class="mini" type="button" data-v="${esc(value)}" onclick="copyText(this.dataset.v)">คัดลอก</button></div>`;
+}
+function recvHTML(name) {
+  const i = PAY[name] || {}, qr = safeQR(i.qr);
+  const editBtn = label => `<button class="mini" type="button" data-name="${esc(name)}" onclick="openPayInfo(this.dataset.name)">${label}</button>`;
+  if (!hasInfo(i)) return `<div class="recv none"><span>${esc(name)} ยังไม่ได้เพิ่ม QR หรือเลขบัญชี</span>${editBtn("+ เพิ่ม")}</div>`;
+  return `<div class="recv">
+    ${qr ? `<img class="qr" src="${esc(qr)}" alt="QR รับเงินของ ${esc(name)}">` : ""}
+    ${i.account ? copyRow(esc([i.bank, i.accName].filter(Boolean).join(" · ") || "เลขบัญชี"), i.account) : ""}
+    ${i.promptpay ? copyRow("พร้อมเพย์" + (i.accName && !i.account ? " · " + esc(i.accName) : ""), i.promptpay) : ""}
+    ${editBtn("แก้ไขช่องทางรับเงิน")}
+  </div>`;
+}
+
+function openPay(k) {
+  payFor = k; renderPay();
+  if (!payDialog.open) payDialog.showModal();
+  loadPay();
+}
+function renderPay() {
+  if (payFor === null || !DATA) return;
+  const k = payFor, d = debts()[k];
+  const anyShared = d.to.some(g => g.items.some(x => x.with.length));
+  document.getElementById("payBody").innerHTML = `
+    <div class="dhead"><h3>ชำระเงิน · ${esc(DATA.people[k])}</h3>
+      <button class="x" type="button" onclick="payDialog.close()" aria-label="ปิด">✕</button></div>
+    ${d.total > 0.5
+      ? `<p class="sub" style="margin:0">ต้องโอนรวม <b>${baht(d.total)}</b> ให้ ${d.to.length} คน</p>`
+      : `<div class="empty">ไม่มียอดต้องโอนแล้ว 🎉</div>`}
+    ${d.to.map((g, gi) => {
+      const solo = g.items.filter(x => !x.with.length).length;
+      return `<div class="payto">
+        <div class="top"><span>โอนให้ <span class="name">${esc(g.name)}</span></span><b class="big">${baht(g.amount)}</b></div>
+        <ul>${g.items.map(x => `<li><span>${esc(DATA.items[x.ix].name)}${x.with.length ? ` <small>(สำรองจ่ายร่วมกับ ${esc(x.with.join(", "))})</small>` : ""}</span><span>${baht(x.amt)}</span></li>`).join("")}</ul>
+        ${recvHTML(g.name)}
+        ${EDITABLE && solo ? `<button class="btn ghost" type="button" onclick="markPaid(${gi}, this)">✓ โอนให้ ${esc(g.name)} แล้ว · ติ๊กจ่าย ${solo} รายการ</button>` : ""}
+      </div>`;
+    }).join("")}
+    ${EDITABLE && d.total > 0.5 && (d.to.length > 1 || anyShared) ? `<button class="btn" type="button" onclick="markPaid(-1, this)">✓ โอนครบทุกคนแล้ว · ติ๊กจ่ายทั้งหมด</button>` : ""}
+    ${d.pending > 0.5 ? `<p class="hint" style="margin:0">* ยังมี ${baht(d.pending)} จากรายการที่ยังไม่ระบุคนสำรองจ่าย</p>` : ""}`;
+}
+
+// ติ๊กว่าจ่ายแล้วในชีต: gi = กลุ่มคนรับเงิน (เฉพาะรายการที่เขาสำรองจ่ายคนเดียว), -1 = ทุกรายการ
+async function markPaid(gi, btn) {
+  const k = payFor, d = debts()[k];
+  const list = gi < 0
+    ? [...new Set(d.to.flatMap(g => g.items.map(x => x.ix)))]
+    : d.to[gi].items.filter(x => !x.with.length).map(x => x.ix);
+  if (!list.length) return;
+  if (!confirm(`ติ๊กว่า ${DATA.people[k]} จ่ายแล้ว ${list.length} รายการ?`)) return;
+  btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  let done = 0;
+  try {
+    for (const ix of list) {
+      const it = DATA.items[ix];
+      await api({ action: "toggle", item: it.name, person: k, value: true });
+      it.paid[k] = true; done++;
+    }
+    toast(`ติ๊กจ่ายแล้ว ${done} รายการ ✓`);
+  } catch (e) { toast("⚠️ " + e.message + (done ? ` (บันทึกแล้ว ${done} รายการ)` : "")); }
+  lastJSON = JSON.stringify(DATA); render(); renderPay();
+}
+
+function copyText(v) {
+  const ok = () => toast("คัดลอกแล้ว: " + v);
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(v).then(ok, () => fallbackCopy(v, ok));
+  else fallbackCopy(v, ok);
+}
+function fallbackCopy(v, ok) {
+  const t = document.createElement("textarea");
+  t.value = v; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+  document.body.appendChild(t); t.select();
+  try { document.execCommand("copy"); ok(); } catch (e) { toast("คัดลอกไม่ได้ กดค้างที่ตัวเลขแทน"); }
+  t.remove();
+}
+
+function openPayInfo(name) {
+  infoName = name;
+  const i = PAY[name] || {}, f = document.getElementById("infoForm");
+  f.reset();
+  ["bank", "account", "accName", "promptpay"].forEach(n => f.elements[n].value = i[n] || "");
+  infoQR = safeQR(i.qr); showQR();
+  document.getElementById("infoTitle").textContent = "ช่องทางรับเงินของ " + name;
+  infoDialog.showModal();
+}
+function showQR() {
+  const img = document.getElementById("qrPreview");
+  img.hidden = !infoQR; if (infoQR) img.src = infoQR; else img.removeAttribute("src");
+  document.getElementById("qrNone").hidden = !!infoQR;
+  document.getElementById("qrClear").hidden = !infoQR;
+}
+// ย่อรูปให้เล็กพอเก็บในชีตได้
+async function shrinkImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => {
+      const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error("เปิดรูปไม่ได้")); im.src = url;
+    });
+    let side = 560;
+    for (let i = 0; i < 10; i++) {
+      const s = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      const x = c.getContext("2d");
+      x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+      x.drawImage(img, 0, 0, c.width, c.height);
+      const out = c.toDataURL("image/jpeg", 0.85);
+      if (out.length <= QR_MAX) return out;
+      side *= 0.85;
+    }
+    throw new Error("รูปใหญ่เกินไป ลองครอปให้เหลือแค่ QR");
+  } finally { URL.revokeObjectURL(url); }
+}
+document.getElementById("qrFile").addEventListener("change", async ev => {
+  const file = ev.target.files[0]; ev.target.value = "";
+  if (!file) return;
+  try { infoQR = await shrinkImage(file); showQR(); } catch (e) { toast("⚠️ " + e.message); }
+});
+document.getElementById("qrClear").addEventListener("click", () => { infoQR = ""; showQR(); });
+
+document.getElementById("infoForm").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const f = new FormData(ev.target), btn = document.getElementById("infoSave");
+  const info = { bank: "", account: "", accName: "", promptpay: "" };
+  Object.keys(info).forEach(n => info[n] = (f.get(n) || "").trim());
+  info.qr = infoQR;
+  btn.disabled = true; btn.textContent = "กำลังบันทึก…";
+  try {
+    await api({ action: "savePay", name: infoName, ...info }, PAY_API_URL);
+    PAY[infoName] = info; payJSON = JSON.stringify(PAY);
+    render(); infoDialog.close(); toast("บันทึกช่องทางรับเงินแล้ว ✓");
+  } catch (e) {
+    toast("⚠️ " + (e.message === "ไม่รู้จักคำสั่ง" ? "สคริปต์ยังไม่รองรับ ต้องเพิ่ม pay.gs แล้ว Deploy ใหม่" : e.message));
+  }
+  btn.disabled = false; btn.textContent = "บันทึก";
+});
+
+async function loadPay() {
+  if (!PAY_API_URL) return;
+  try {
+    const j = await (await fetch(`${PAY_API_URL}?action=pay&t=${Date.now()}`, { cache: "no-store" })).json();
+    if (!j.ok || !j.people) return;
+    const json = JSON.stringify(j.people);
+    if (json !== payJSON) { payJSON = json; PAY = j.people; render(); }
+  } catch (e) { console.warn("โหลดช่องทางรับเงินไม่ได้", e); }
+}
+
 async function load() {
   if (Date.now() < holdUntil) return;
   try {
@@ -440,9 +725,9 @@ async function load() {
     if (!DATA) app.innerHTML = `<section><div class="empty">ยังโหลดข้อมูลไม่ได้</div></section>`;
   }
 }
-load();
+load().then(loadPay);
 setInterval(() => { if (!document.hidden) load(); }, REFRESH_SEC * 1000);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadPay(); } });
 </script>
 </body>
 </html>
