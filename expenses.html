@@ -245,6 +245,7 @@
 
 <footer class="wrap">ข้อมูลอัปเดตจาก Google Sheet อัตโนมัติทุก 30 วินาที</footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 // ====== ตั้งค่า ======
 const SHEET_ID = "1g6TUgi-lsjH7V-GZ_DfPVEWCNYqz2OyLvq09_fQpO-4";
@@ -563,14 +564,131 @@ function copyRow(label, value) {
   return `<div class="copy"><span><small>${label}</small><b>${esc(value)}</b></span>
     <button class="mini" type="button" data-v="${esc(value)}" onclick="copyText(this.dataset.v)">คัดลอก</button></div>`;
 }
-function recvHTML(name) {
+// ====== QR พร้อมเพย์แบบใส่ยอดเงิน (สแกนแล้วยอดขึ้นในแอปธนาคารเอง) ======
+const ppTLV = (id, v) => id + String(v.length).padStart(2, "0") + v;
+function crc16(s) {
+  let c = 0xFFFF;
+  for (let i = 0; i < s.length; i++) {
+    c ^= s.charCodeAt(i) << 8;
+    for (let b = 0; b < 8; b++) c = (c & 0x8000 ? (c << 1) ^ 0x1021 : c << 1) & 0xFFFF;
+  }
+  return c.toString(16).toUpperCase().padStart(4, "0");
+}
+// แยก QR แบบ EMV เป็น [รหัส, ค่า] ใช้ได้เฉพาะ QR พร้อมเพย์
+function ppParse(s) {
+  const out = [];
+  for (let i = 0; i < s.length; ) {
+    const id = s.substr(i, 2), len = Number(s.substr(i + 2, 2)), val = s.substr(i + 4, len);
+    if (!/^\d\d$/.test(id) || isNaN(len) || val.length < len) return null;
+    out.push([id, val]); i += 4 + len;
+  }
+  return out.some(([id, v]) => +id >= 26 && +id <= 51 && v.includes("A00000067701011")) ? out : null;
+}
+// จากเบอร์โทร / เลขบัตรประชาชน / e-wallet
+function ppFromId(raw) {
+  const d = String(raw || "").replace(/\D/g, "");
+  const sub = d.length === 10 && d[0] === "0" ? ppTLV("01", "0066" + d.slice(1))
+    : d.length === 13 ? ppTLV("02", d) : d.length === 15 ? ppTLV("03", d) : "";
+  if (!sub) return null;
+  return ppTLV("00", "01") + ppTLV("01", "11") + ppTLV("29", ppTLV("00", "A000000677010111") + sub) + ppTLV("53", "764") + ppTLV("58", "TH");
+}
+function ppWithAmount(payload, amt) {
+  const t = ppParse(payload);
+  if (!t) return null;
+  const f = t.filter(([id]) => id !== "54" && id !== "63" && id !== "01");
+  f.push(["01", "12"], ["54", amt.toFixed(2)]);
+  f.sort((a, b) => a[0].localeCompare(b[0]));
+  const body = f.map(([id, v]) => ppTLV(id, v)).join("") + "6304";
+  return body + crc16(body);
+}
+// QR ที่คนรับเงินอัปโหลดไว้: อ่านว่าเป็นพร้อมเพย์ไหม (โหลดตัวอ่าน QR เฉพาะตอนต้องใช้)
+const PPCACHE = {};
+let jsqrP = null;
+const loadJsQR = () => jsqrP || (jsqrP = new Promise((ok, no) => {
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js";
+  s.onload = () => ok(window.jsQR); s.onerror = () => { jsqrP = null; no(new Error("โหลดตัวอ่าน QR ไม่ได้")); };
+  document.head.appendChild(s);
+}));
+async function decodeQR(name) {
+  const src = safeQR((PAY[name] || {}).qr);
+  if (!src || (PPCACHE[name] && PPCACHE[name].src === src)) return;
+  PPCACHE[name] = { src, payload: null };
+  try {
+    const jsQR = await loadJsQR();
+    const img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; });
+    const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext("2d"); x.drawImage(img, 0, 0);
+    const r = jsQR(x.getImageData(0, 0, c.width, c.height).data, c.width, c.height);
+    if (r && ppParse(r.data)) PPCACHE[name].payload = r.data;
+  } catch (e) { console.warn("อ่าน QR ไม่ได้", e); }
+  PPCACHE[name].done = true;
+  if (payDialog.open) renderPay();
+}
+// ใช้ QR ที่อัปโหลดก่อน (มาจากแอปธนาคารโดยตรง) ถ้าไม่ใช่พร้อมเพย์ค่อยใช้เบอร์ที่พิมพ์ไว้
+// คืน undefined = กำลังอ่าน QR อยู่
+function ppPayload(name) {
+  const i = PAY[name] || {}, qr = safeQR(i.qr), c = PPCACHE[name];
+  if (qr && !(c && c.src === qr && c.done)) return undefined;
+  return (qr && c.payload) || ppFromId(i.promptpay) || null;
+}
+function ppCanvas(payload, label) {
+  const qr = qrcode(0, "M"); qr.addData(payload); qr.make();
+  const n = qr.getModuleCount(), cell = 8, pad = 4 * cell, size = n * cell + pad * 2, foot = 52;
+  const c = document.createElement("canvas"); c.width = size; c.height = size + foot;
+  const x = c.getContext("2d");
+  x.fillStyle = "#fff"; x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = "#000";
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(pad + k * cell, pad + r * cell, cell, cell);
+  x.fillStyle = "#1f2a24"; x.font = '600 22px "Noto Sans Thai", system-ui, sans-serif'; x.textAlign = "center";
+  x.fillText(label, size / 2, size + 22);
+  return c;
+}
+const bahtExact = n => n.toLocaleString("th-TH", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + " ฿";
+let PAYQ = [];   // QR ของแต่ละคนรับเงินในหน้าต่างชำระเงิน สำหรับปุ่มบันทึก/แชร์
+
+async function payShare(gi) {
+  const q = PAYQ[gi];
+  if (!q) return;
+  const blob = await new Promise(ok => q.canvas.toBlob(ok, "image/png"));
+  const file = new File([blob], `promptpay-${q.name}-${q.amt.toFixed(2)}.png`, { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: `โอนให้ ${q.name} ${bahtExact(q.amt)}` }); return; }
+    catch (e) { if (e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast("บันทึกรูป QR แล้ว · เปิดแอปธนาคาร → สแกน → เลือกรูปจากคลังภาพ");
+}
+
+function recvHTML(name, amt, gi) {
   const i = PAY[name] || {}, qr = safeQR(i.qr);
   const editBtn = label => `<button class="mini" type="button" data-name="${esc(name)}" onclick="openPayInfo(this.dataset.name)">${label}</button>`;
   if (!hasInfo(i)) return `<div class="recv none"><span>${esc(name)} ยังไม่ได้เพิ่ม QR หรือเลขบัญชี</span>${editBtn("+ เพิ่ม")}</div>`;
+  const rows = `${i.account ? copyRow(esc([i.bank, i.accName].filter(Boolean).join(" · ") || "เลขบัญชี"), i.account) : ""}
+    ${i.promptpay ? copyRow("พร้อมเพย์" + (i.accName && !i.account ? " · " + esc(i.accName) : ""), i.promptpay) : ""}`;
+  const base = window.qrcode ? ppPayload(name) : null;
+  if (base === undefined) {
+    decodeQR(name);
+    return `<div class="recv"><p class="hint" style="margin:0">กำลังเตรียม QR พร้อมยอดเงิน…</p></div>`;
+  }
+  const payload = base && ppWithAmount(base, amt);
+  if (payload) {
+    const canvas = ppCanvas(payload, `โอนให้ ${name} · ${bahtExact(amt)}`);
+    PAYQ[gi] = { name, amt, canvas };
+    return `<div class="recv">
+      <img class="qr" src="${canvas.toDataURL("image/png")}" alt="QR พร้อมเพย์ โอนให้ ${esc(name)} ${esc(bahtExact(amt))}">
+      <button class="btn pay" type="button" onclick="payShare(${gi})">📲 ชำระเงิน ${esc(bahtExact(amt))}</button>
+      <p class="hint" style="margin:0">กดแล้วเลือก "บันทึกรูป" → เปิดแอปธนาคาร → สแกน → เลือกรูปจากคลังภาพ <b>ชื่อผู้รับและยอดเงินจะขึ้นให้เอง</b> · ถ้าเปิดจากคอม สแกน QR บนจอด้วยมือถือได้เลย</p>
+      ${rows.trim() ? `<details><summary class="hint" style="margin:0;cursor:pointer">ดูเลขบัญชี / พร้อมเพย์</summary><div class="recv" style="border:0;padding-top:6px">${rows}</div></details>` : ""}
+      ${editBtn("แก้ไขช่องทางรับเงิน")}
+    </div>`;
+  }
   return `<div class="recv">
     ${qr ? `<img class="qr" src="${esc(qr)}" alt="QR รับเงินของ ${esc(name)}">` : ""}
-    ${i.account ? copyRow(esc([i.bank, i.accName].filter(Boolean).join(" · ") || "เลขบัญชี"), i.account) : ""}
-    ${i.promptpay ? copyRow("พร้อมเพย์" + (i.accName && !i.account ? " · " + esc(i.accName) : ""), i.promptpay) : ""}
+    ${copyRow("ยอดที่ต้องโอน (ใส่เองในแอป)", amt.toFixed(2))}
+    ${rows}
     ${editBtn("แก้ไขช่องทางรับเงิน")}
   </div>`;
 }
@@ -584,6 +702,7 @@ function renderPay() {
   if (payFor === null || !DATA) return;
   const k = payFor, d = debts()[k];
   const anyShared = d.to.some(g => g.items.some(x => x.with.length));
+  PAYQ = [];
   document.getElementById("payBody").innerHTML = `
     <div class="dhead"><h3>ชำระเงิน · ${esc(DATA.people[k])}</h3>
       <button class="x" type="button" onclick="payDialog.close()" aria-label="ปิด">✕</button></div>
@@ -592,10 +711,11 @@ function renderPay() {
       : `<div class="empty">ไม่มียอดต้องโอนแล้ว 🎉</div>`}
     ${d.to.map((g, gi) => {
       const solo = g.items.filter(x => !x.with.length).length;
+      const amt = Math.round(g.amount * 100) / 100;
       return `<div class="payto">
-        <div class="top"><span>โอนให้ <span class="name">${esc(g.name)}</span></span><b class="big">${baht(g.amount)}</b></div>
-        <ul>${g.items.map(x => `<li><span>${esc(DATA.items[x.ix].name)}${x.with.length ? ` <small>(สำรองจ่ายร่วมกับ ${esc(x.with.join(", "))})</small>` : ""}</span><span>${baht(x.amt)}</span></li>`).join("")}</ul>
-        ${recvHTML(g.name)}
+        <div class="top"><span>โอนให้ <span class="name">${esc(g.name)}</span></span><b class="big">${bahtExact(amt)}</b></div>
+        <ul>${g.items.map(x => `<li><span>${esc(DATA.items[x.ix].name)}${x.with.length ? ` <small>(สำรองจ่ายร่วมกับ ${esc(x.with.join(", "))})</small>` : ""}</span><span>${bahtExact(Math.round(x.amt * 100) / 100)}</span></li>`).join("")}</ul>
+        ${recvHTML(g.name, amt, gi)}
         ${EDITABLE && solo ? `<button class="btn ghost" type="button" onclick="markPaid(${gi}, this)">✓ โอนให้ ${esc(g.name)} แล้ว · ติ๊กจ่าย ${solo} รายการ</button>` : ""}
       </div>`;
     }).join("")}
