@@ -115,7 +115,7 @@
   .t-place .title { font-weight: 600; }
   .tag.place { background: var(--accent-soft); color: var(--accent); }
   .t-travel .dot { border-color: var(--travel); }
-  .t-travel .card { background: transparent; box-shadow: none; border-style: dashed; }
+  .t-travel .card { background: color-mix(in srgb, var(--surface) 72%, transparent); box-shadow: none; border-style: dashed; }
   .t-travel .title { color: var(--muted); }
   .tag.travel { background: var(--travel-soft); color: var(--travel); }
   .t-food .dot { border-color: var(--food); }
@@ -200,8 +200,10 @@
     .ed-bar button { flex: 1; }
   }
 </style>
+<link rel="stylesheet" href="forest.css">
 </head>
 <body>
+<div class="scene" aria-hidden="true"><i class="mount"></i><i class="far"></i><i class="fog"></i><i class="mid"></i><i class="near"></i></div>
 <header class="wrap">
   <div class="eyebrow">🌲 Chiang Mai</div>
   <h1>แพลนเชียงใหม่</h1>
