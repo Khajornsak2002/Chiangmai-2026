@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>เส้นทางขับรถ · ทริปเชียงใหม่ 2569</title>
+<meta name="description" content="แผนที่เส้นทางขับรถแต่ละวัน ทริปเชียงใหม่ 26–31 ธันวาคม 2569">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  :root {
+    --bg: #f6f4ef;
+    --surface: #ffffff;
+    --text: #1f2a24;
+    --muted: #6b756f;
+    --line: #e4e1d8;
+    --accent: #2f6b4f;
+    --accent-soft: #e3efe8;
+    --warn: #b4532a;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121614;
+      --surface: #1b211e;
+      --text: #e8ece9;
+      --muted: #94a09a;
+      --line: #2b332f;
+      --accent: #7cc4a0;
+      --accent-soft: #1f3329;
+      --warn: #ee9a74;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Sans Thai", system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  a { color: var(--accent); }
+
+  .app { display: grid; grid-template-columns: 400px 1fr; height: 100vh; height: 100dvh; }
+  .panel { overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg); padding: 20px 18px 40px; }
+  .map-wrap { position: relative; }
+  #map { position: absolute; inset: 0; background: var(--line); }
+
+  .back { font-size: 14px; text-decoration: none; font-weight: 500; }
+  .back:hover { text-decoration: underline; }
+  h1 { font-size: 26px; line-height: 1.2; margin: 8px 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; }
+  .sync { color: var(--muted); font-size: 12.5px; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+  .led { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; flex: none; }
+  .led.ok { background: #3fae6a; } .led.warn { background: #e0a030; }
+
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 14px 0 10px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--line); background: var(--surface); padding: 5px 12px; border-radius: 999px;
+    font-size: 14px; cursor: pointer;
+  }
+  .tab i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .tab[aria-selected="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .note { font-size: 12.5px; color: var(--muted); margin: 4px 0 10px; }
+
+  /* ภาพรวมทุกวัน */
+  .days { list-style: none; display: grid; gap: 8px; }
+  .dcard {
+    width: 100%; text-align: left; cursor: pointer; display: grid; grid-template-columns: 6px 1fr auto; gap: 12px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px 12px 12px; box-shadow: var(--shadow);
+  }
+  .dcard:hover { border-color: var(--c); }
+  .dcard .bar { border-radius: 4px; background: var(--c); }
+  .dcard .d { font-size: 12.5px; color: var(--muted); }
+  .dcard b { display: block; font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .dcard .km { text-align: right; font-variant-numeric: tabular-nums; }
+  .dcard .km b { font-size: 18px; }
+  .dcard .km small { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+  .dcard.none .km b { font-size: 13px; font-weight: 500; color: var(--muted); }
+
+  /* รายละเอียดวัน */
+  .dhead { border-left: 4px solid var(--c); padding-left: 12px; margin: 4px 0 12px; }
+  .dhead .d { color: var(--muted); font-size: 13px; }
+  .dhead h2 { font-size: 19px; line-height: 1.3; }
+  .sum { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 12px; }
+  .sum div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: 13px; color: var(--muted); }
+  .sum b { display: block; color: var(--text); font-size: 17px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+  .navall {
+    display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+    background: var(--accent); color: var(--bg); text-decoration: none; font-weight: 600; font-size: 15px;
+    border-radius: 12px; padding: 10px 14px; margin-bottom: 14px;
+  }
+  .navall:hover { filter: brightness(1.08); }
+  .navparts { display: flex; gap: 8px; margin-bottom: 14px; }
+  .navparts .navall { margin-bottom: 0; font-size: 14px; }
+
+  .stops { list-style: none; }
+  .stop {
+    display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; cursor: pointer;
+  }
+  .stop:hover { border-color: var(--c); }
+  .num {
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--c); color: #fff; font-weight: 700; font-size: 13px;
+  }
+  .stop.stay .num { border-radius: 8px; }
+  .stop.miss { cursor: default; opacity: .75; border-style: dashed; }
+  .stop.miss .num { background: var(--line); color: var(--muted); }
+  .stop .t { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stop .n { font-weight: 600; font-size: 15px; line-height: 1.35; }
+  .stop .links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; }
+  .stop .links a { text-decoration: none; font-weight: 500; }
+  .stop .links a:hover { text-decoration: underline; }
+  .stop .warn { color: var(--warn); font-size: 12.5px; }
+  .leg {
+    display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px;
+    margin-left: 25px; padding: 6px 0 6px 18px; border-left: 2px dashed var(--c); font-variant-numeric: tabular-nums;
+  }
+  .empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 14px; padding: 18px; color: var(--muted); text-align: center; }
+
+  /* แผนที่โหมดมืด: กลับสีแผ่นแผนที่ OSM */
+  @media (prefers-color-scheme: dark) {
+    .tiles { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6); }
+  }
+
+  /* หมุดบนแผนที่ */
+  .pin {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--c); color: #fff; font: 700 12px "Noto Sans Thai", sans-serif;
+    border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35);
+  }
+  .pin.stay { border-radius: 7px; }
+  .leaflet-popup-content { font-family: "Noto Sans Thai", system-ui, sans-serif; font-size: 13.5px; margin: 10px 14px; }
+  .pop b { display: block; font-size: 14.5px; }
+  .pop small { color: #6b756f; }
+  .pop a { display: inline-block; margin-top: 6px; font-weight: 600; }
+  .loading {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%); z-index: 500;
+    background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 14px; font-size: 13px; box-shadow: var(--shadow);
+  }
+
+  @media (max-width: 860px) {
+    .app { display: flex; flex-direction: column; height: auto; }
+    .map-wrap { order: -1; position: sticky; top: 0; z-index: 5; height: 44vh; height: 44dvh; border-bottom: 1px solid var(--line); }
+    .panel { border-right: 0; overflow: visible; padding: 16px 16px 48px; }
+    h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel">
+    <a class="back" href="index.html">← กลับไปหน้าแพลน</a>
+    <h1>🚗 เส้นทางขับรถ</h1>
+    <p class="sub" id="tripSum">กำลังคำนวณระยะทาง…</p>
+    <p class="sync" id="syncStatus"><i class="led"></i>กำลังโหลดแพลนจาก Google Sheet…</p>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div id="body"></div>
+  </aside>
+  <main class="map-wrap">
+    <div id="map" role="application" aria-label="แผนที่เส้นทางขับรถ"></div>
+    <div class="loading" id="loading" hidden>กำลังหาเส้นทาง…</div>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="trip-data.js"></script>
+<script>
+// ====== พิกัดสถานที่ ======
+// key = ข้อความในช่อง "ค้นหาในแผนที่" ของชีต, ค่า = [lat, lng] (ตรวจกับ Google Maps แล้ว)
+// ถ้าเพิ่มสถานที่ใหม่ในชีต: ใส่พิกัดเพิ่มที่นี่ หรือพิมพ์พิกัด "18.78,98.99" ลงในช่องค้นหาในแผนที่ได้เลย
+// สถานที่ที่ไม่มีในตารางนี้ หน้าเว็บจะลองค้นหาพิกัดเองจาก OpenStreetMap (อาจคลาดเคลื่อน)
+const PLACES = {
+  "สถานีรถไฟเชียงใหม่": [18.78362, 99.01680],
+  "สวนผลิตเมล็ดพันธุ์ไม้สนสองใบ แม่แตง": [19.15135, 98.94806],
+  "บ้านดอยนับดาว เชียงดาว": [19.41574, 98.84600],
+  "ไร่ปางแกะเมอร์ริโน่": [18.89533, 98.83842],
+  "Pongyang Jungle Coaster": [18.91683, 98.82153],
+  "บ้านภูต้นซ้อ ม่อนแจ่ม": [18.93303, 98.81598],
+  "จุดชมวิวดอยปุย": [18.81650, 98.88917],
+  "วัดพระธาตุดอยสุเทพราชวรวิหาร": [18.80499, 98.92163],
+  "อ่างแก้ว มหาวิทยาลัยเชียงใหม่": [18.80658, 98.95178],
+  "สวนสาธารณะ อบจ.เชียงใหม่": [18.83174, 98.96812],
+  "ลานกางเต็นท์ ดอยอินทนนท์": [18.54225, 98.52341],
+  "กิ่วแม่ปาน": [18.55861, 98.47942],
+  "เส้นทางศึกษาธรรมชาติกิ่วแม่ปาน": [18.55861, 98.47942],
+  "ผาช่อ อุทยานแห่งชาติแม่วาง": [18.51767, 98.73710],
+  "หมู่บ้านแม่กำปอง": [18.86551, 99.35098],
+  "Bedroom Chiangmai": [18.81214, 99.00688],
+  "ต้นฉำฉากลางน้ำ เขื่อนแม่งัด": [19.19663, 99.15931],   // ท่าเรือชมต้นฉำฉา (ฝั่งพร้าว)
+  "ประตูท่าแพ เชียงใหม่": [18.78781, 98.99337],
+  "คลองแม่ข่า เชียงใหม่": [18.77707, 98.99557],
+  "สถานีกลางกรุงเทพอภิวัฒน์": [13.80367, 100.54245],
+};
+
+const COLORS = ["#E8622C", "#1F77B4", "#2CA02C", "#9467BD", "#D62728", "#17A2B8", "#C49C20"];
+const colorOf = i => COLORS[i % COLORS.length];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = s => String(s || "").replace(/\s+/g, " ").trim();
+const llKey = ll => ll[0].toFixed(5) + "," + ll[1].toFixed(5);
+const gmDir = (dest, origin, waypoints) =>
+  "https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + llKey(dest) +
+  (origin ? "&origin=" + llKey(origin) : "") +
+  (waypoints && waypoints.length ? "&waypoints=" + encodeURIComponent(waypoints.map(llKey).join("|")) : "");
+const gmSearch = q => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q);
+
+function fmtKm(m) { const km = m / 1000; return (km < 10 ? km.toFixed(1) : Math.round(km)).toString(); }
+function fmtDur(s) {
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} นาที`;
+  const h = Math.floor(m / 60), r = m % 60;
+  return r ? `${h} ชม. ${r} นาที` : `${h} ชม.`;
+}
+
+// ====== localStorage cache (ใช้ได้แม้เปิดในโหมดส่วนตัว) ======
+function cacheGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+function cacheSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+// ====== หาพิกัด ======
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let lastGeocode = 0;
+async function geocode(q) {
+  const key = "geo:" + q, hit = cacheGet(key);
+  if (hit !== null) return hit.ll || null;
+  const wait = lastGeocode + 1100 - Date.now();   // Nominatim ขอไม่เกิน 1 ครั้ง/วินาที
+  if (wait > 0) await sleep(wait);
+  lastGeocode = Date.now();
+  try {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=th" +
+      "&viewbox=97.3,20.2,99.7,17.2&bounded=1&q=" + encodeURIComponent(q);
+    const j = await (await fetch(url)).json();
+    const ll = j[0] ? [+(+j[0].lat).toFixed(5), +(+j[0].lon).toFixed(5)] : null;
+    cacheSet(key, { ll });
+    return ll;
+  } catch (e) { return null; }
+}
+
+async function resolve(q) {
+  const m = q.match(/^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/);
+  if (m) return { ll: [+m[1], +m[2]], how: "sheet" };
+  const k = norm(q);
+  if (PLACES[k]) return { ll: PLACES[k], how: "table" };
+  const ll = await geocode(k);
+  return ll ? { ll, how: "auto" } : null;
+}
+
+// ====== จุดแวะของแต่ละวัน ======
+// เอาเฉพาะรายการที่มีคำค้นในแผนที่ เรียงตามแพลน
+// ถ้าคืนก่อนพักที่ไหน วันนี้เริ่มออกจากที่พักนั้น (ยกเว้นคืนบนรถไฟ ซึ่งไม่ใช่ประเภทที่พัก)
+async function buildDays(trip) {
+  const out = [];
+  let prevStay = null;
+  for (let i = 0; i < trip.length; i++) {
+    const d = trip[i], stops = [], missing = [];
+    if (prevStay) stops.push({ ...prevStay, start: true });
+    let lastMapped = null;
+    for (const [time, text, type, q] of d.items) {
+      if (!norm(q)) continue;
+      const r = await resolve(q);
+      if (!r) { missing.push({ time, text, q }); continue; }
+      lastMapped = { time, text, type, q: norm(q), ll: r.ll, how: r.how };
+      const prev = stops[stops.length - 1];
+      if (prev && llKey(prev.ll) === llKey(r.ll)) { if (prev.start) Object.assign(prev, lastMapped, { start: false }); continue; }
+      stops.push(lastMapped);
+    }
+    prevStay = lastMapped && lastMapped.type === "stay" ? { ...lastMapped, time: "" } : null;
+    out.push({ i, date: d.date, label: d.label, title: d.title, color: colorOf(i), stops, missing });
+  }
+  return out;
+}
+
+// ====== เส้นทางตามถนน (OSRM) ======
+const haversine = (a, b) => {
+  const R = 6371000, rad = Math.PI / 180, dLat = (b[0] - a[0]) * rad, dLng = (b[1] - a[1]) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+};
+async function routeOf(stops) {
+  const pts = stops.map(s => s.ll);
+  const key = "osrm:" + pts.map(llKey).join(";"), hit = cacheGet(key);
+  if (hit) return hit;
+  try {
+    const url = "https://router.project-osrm.org/route/v1/driving/" +
+      pts.map(p => `${p[1]},${p[0]}`).join(";") + "?overview=full&geometries=geojson";
+    const j = await (await fetch(url)).json();
+    if (j.code !== "Ok") throw new Error(j.code);
+    const r = j.routes[0];
+    const res = {
+      ok: true,
+      line: r.geometry.coordinates.map(([lng, lat]) => [+lat.toFixed(5), +lng.toFixed(5)]),
+      legs: r.legs.map(l => ({ m: l.distance, s: l.duration })),
+    };
+    cacheSet(key, res);
+    return res;
+  } catch (e) {
+    // หาเส้นทางไม่ได้: ลากเส้นตรงและประมาณระยะ (ถนนจริงยาวกว่าเส้นตรงราว 1.4 เท่า)
+    const legs = pts.slice(1).map((p, k) => { const m = haversine(pts[k], p) * 1.4; return { m, s: m / 11 }; });
+    return { ok: false, line: pts, legs };
+  }
+}
+
+// ====== แผนที่ ======
+const map = L.map("map", { zoomControl: true });
+L.control.scale({ imperial: false }).addTo(map);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, className: "tiles",
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · เส้นทาง <a href="https://project-osrm.org/">OSRM</a>',
+}).addTo(map);
+map.setView([18.79, 98.98], 9);
+
+const lineLayer = L.layerGroup().addTo(map);
+const pinLayer = L.layerGroup().addTo(map);
+let DAYS = [], sel = null, lastSig = "";
+
+const tabsEl = document.getElementById("tabs"), bodyEl = document.getElementById("body");
+
+function pinIcon(day, n, stop) {
+  return L.divIcon({
+    className: "", iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -12],
+    html: `<div class="pin${stop.type === "stay" ? " stay" : ""}" style="--c:${day.color}">${n}</div>`,
+  });
+}
+function popHtml(day, n, s) {
+  return `<div class="pop"><small>วัน ${day.i + 1} · จุดที่ ${n}${s.time ? " · " + esc(s.time) : ""}</small>
+    <b>${esc(s.start ? "ออกจาก " + s.q : s.text)}</b>
+    <a href="${gmDir(s.ll)}" target="_blank" rel="noopener">🧭 นำทางไปที่นี่</a></div>`;
+}
+
+function drawMap() {
+  lineLayer.clearLayers(); pinLayer.clearLayers();
+  const shown = sel === null ? DAYS : [DAYS[sel]];
+  let bounds = null;
+  const grow = ll => { bounds = bounds ? bounds.extend(ll) : L.latLngBounds([ll, ll]); };
+  // วาดวันอื่นจางๆ ไว้ด้านหลังเมื่อเลือกวันเดียว
+  if (sel !== null) DAYS.forEach(d => d.route && d.i !== sel &&
+    L.polyline(d.route.line, { color: d.color, weight: 3, opacity: .18, interactive: false }).addTo(lineLayer));
+  shown.forEach(d => {
+    if (d.route) {
+      const pl = L.polyline(d.route.line, {
+        color: d.color, weight: sel === null ? 4 : 6, opacity: .9, lineJoin: "round", lineCap: "round",
+        dashArray: d.route.ok ? null : "8 8",
+      }).addTo(lineLayer);
+      pl.bindTooltip(`วัน ${d.i + 1} · ${esc(d.title)}`, { sticky: true });
+      if (sel === null) pl.on("click", () => select(d.i));
+    }
+    d.stops.forEach((s, k) => {
+      // ภาพรวม: ไม่นับวันที่ไม่ได้ขับรถ (เช่น ถึงกรุงเทพ) จะได้ไม่ซูมออกไปไกล
+      if (sel !== null || d.route) grow(s.ll);
+      if (sel === null) {
+        L.circleMarker(s.ll, { radius: 5, color: "#fff", weight: 1.5, fillColor: d.color, fillOpacity: 1 })
+          .bindPopup(popHtml(d, k + 1, s)).addTo(pinLayer);
+      } else {
+        s.marker = L.marker(s.ll, { icon: pinIcon(d, k + 1, s), zIndexOffset: 100 + k })
+          .bindPopup(popHtml(d, k + 1, s)).addTo(pinLayer);
+      }
+    });
+  });
+  if (bounds) map.fitBounds(bounds, { padding: [36, 36], maxZoom: 14 });
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = [`<button class="tab" role="tab" aria-selected="${sel === null}" data-i="">ทุกวัน</button>`]
+    .concat(DAYS.map(d => `<button class="tab" role="tab" aria-selected="${sel === d.i}" data-i="${d.i}" style="--c:${d.color}"><i></i>วัน ${d.i + 1}</button>`))
+    .join("");
+  tabsEl.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+}
+tabsEl.addEventListener("click", e => {
+  const b = e.target.closest(".tab"); if (!b) return;
+  select(b.dataset.i === "" ? null : +b.dataset.i);
+});
+
+const totals = d => d.route ? d.route.legs.reduce((a, l) => ({ m: a.m + l.m, s: a.s + l.s }), { m: 0, s: 0 }) : null;
+
+function renderOverview() {
+  bodyEl.innerHTML = `
+    <p class="note">ระยะทางและเวลาขับคำนวณจากถนนจริง เป็นค่าประมาณ ทางขึ้นดอยอาจใช้เวลานานกว่านี้</p>
+    <ul class="days">${DAYS.map(d => {
+      const t = totals(d);
+      return `<li><button class="dcard${t ? "" : " none"}" style="--c:${d.color}" data-i="${d.i}">
+        <span class="bar"></span>
+        <span><span class="d">วัน ${d.i + 1} · ${esc(d.label)}</span><b>${esc(d.title)}</b></span>
+        <span class="km">${t ? `<b>${fmtKm(t.m)} กม.</b><small>ขับ ~${fmtDur(t.s)}</small>` : "<b>ไม่มีช่วงขับรถ</b>"}</span>
+      </button></li>`;
+    }).join("")}</ul>`;
+  bodyEl.querySelectorAll(".dcard").forEach(b => b.onclick = () => select(+b.dataset.i));
+}
+
+// ลิงก์ Google Maps บนมือถือรับจุดแวะกลางทางได้ไม่เกิน 3 จุด จึงแบ่งเป็นช่วงละไม่เกิน 5 จุด (ต้นทาง + แวะ 3 + ปลายทาง)
+const MAX_WAYPOINTS = 3;
+function navLinks(S) {
+  const step = MAX_WAYPOINTS + 1, parts = [];
+  for (let a = 0; a < S.length - 1; a += step) parts.push([a, Math.min(a + step, S.length - 1)]);
+  const link = ([a, b], label) => `<a class="navall" href="${gmDir(S[b].ll, S[a].ll, S.slice(a + 1, b).map(s => s.ll))}" target="_blank" rel="noopener">${label}</a>`;
+  if (parts.length === 1) return link(parts[0], "🧭 เปิดเส้นทางทั้งวันใน Google Maps");
+  return `<div class="navparts">${parts.map((p, k) => link(p, `🧭 ช่วง ${k + 1} · จุด ${p[0] + 1}–${p[1] + 1}`)).join("")}</div>
+    <p class="note" style="margin-top:-8px">Google Maps บนมือถือแวะได้ทีละไม่กี่จุด จึงแบ่งเส้นทางเป็นช่วง</p>`;
+}
+
+function renderDay(d) {
+  const t = totals(d), S = d.stops;
+  const approx = S.filter(s => s.how === "auto");
+  let html = `
+    <div class="dhead" style="--c:${d.color}">
+      <div class="d">วัน ${d.i + 1} / ${DAYS.length} · ${esc(d.label)}</div>
+      <h2>${esc(d.title)}</h2>
+    </div>`;
+  if (t) {
+    html += `<div class="sum">
+        <div><b>${fmtKm(t.m)} กม.</b>ระยะขับรวม</div>
+        <div><b>~${fmtDur(t.s)}</b>เวลาขับ (ไม่รวมแวะ)</div>
+        <div><b>${S.length}</b>จุดแวะ</div>
+      </div>
+      ${navLinks(S)}`;
+    if (!d.route.ok) html += `<p class="note">⚠️ ตอนนี้หาเส้นทางตามถนนไม่ได้ แสดงเป็นเส้นประและระยะโดยประมาณ</p>`;
+  }
+  if (approx.length) html += `<p class="note">⚠️ พิกัดของ ${approx.map(s => esc(s.text)).join(", ")} ได้จากการค้นหาอัตโนมัติ อาจคลาดเคลื่อน ควรเช็กก่อนนำทาง</p>`;
+  if (!S.length && !d.missing.length) html += `<div class="empty">วันนี้ไม่มีสถานที่ที่ระบุตำแหน่งไว้</div>`;
+  else if (S.length < 2) html += `<p class="note">วันนี้ไม่มีช่วงขับรถ${S.length ? " (มีจุดเดียว)" : ""}</p>`;
+
+  html += `<ol class="stops">`;
+  S.forEach((s, k) => {
+    if (k > 0 && d.route) {
+      const l = d.route.legs[k - 1];
+      html += `<li class="leg" style="--c:${d.color}">↓ ${fmtKm(l.m)} กม. · ~${fmtDur(l.s)}</li>`;
+    }
+    html += `<li class="stop${s.type === "stay" ? " stay" : ""}" style="--c:${d.color}" data-k="${k}">
+      <span class="num">${k + 1}</span>
+      <div>
+        <div class="t">${s.start ? "ออกจากที่พักเมื่อคืน" : esc(s.time)}</div>
+        <div class="n">${esc(s.start ? s.q : s.text)}</div>
+        <div class="links">
+          <a href="${gmDir(s.ll)}" target="_blank" rel="noopener">🧭 นำทางไปที่นี่</a>
+          <a href="${gmSearch(s.q)}" target="_blank" rel="noopener">📍 ดูใน Google Maps</a>
+        </div>
+      </div>
+    </li>`;
+  });
+  d.missing.forEach(m => {
+    html += `<li class="stop miss" style="--c:${d.color};margin-top:8px">
+      <span class="num">?</span>
+      <div>
+        <div class="t">${esc(m.time)}</div>
+        <div class="n">${esc(m.text)}</div>
+        <div class="warn">หาพิกัดไม่เจอ จึงไม่ได้รวมในเส้นทาง</div>
+        <div class="links"><a href="${gmSearch(m.q)}" target="_blank" rel="noopener">📍 ค้นใน Google Maps</a></div>
+      </div>
+    </li>`;
+  });
+  html += `</ol>`;
+  bodyEl.innerHTML = html;
+  bodyEl.querySelectorAll(".stop[data-k]").forEach(li => li.addEventListener("click", e => {
+    if (e.target.closest("a")) return;
+    const s = S[+li.dataset.k];
+    map.setView(s.ll, Math.max(map.getZoom(), 13));
+    s.marker?.openPopup();
+  }));
+}
+
+function select(i) {
+  sel = i;
+  renderTabs();
+  if (i === null) renderOverview(); else renderDay(DAYS[i]);
+  drawMap();
+  history.replaceState(null, "", i === null ? location.pathname : "#day" + (i + 1));
+}
+
+function renderTripSum() {
+  const all = DAYS.map(totals).filter(Boolean);
+  const m = all.reduce((a, t) => a + t.m, 0), s = all.reduce((a, t) => a + t.s, 0);
+  document.getElementById("tripSum").textContent =
+    all.length ? `ทั้งทริปขับรวม ~${fmtKm(m)} กม. · ใช้เวลาขับ ~${fmtDur(s)} (${all.length} วันที่ขับรถ)` : "ไม่มีช่วงขับรถ";
+}
+
+function setStatus(kind, msg) {
+  document.getElementById("syncStatus").innerHTML = `<i class="led ${kind}"></i>${esc(msg)}`;
+}
+
+async function show(trip) {
+  const sig = JSON.stringify(trip);
+  if (sig === lastSig) return;
+  lastSig = sig;
+  const loading = document.getElementById("loading");
+  loading.hidden = false;
+  const days = await buildDays(trip);
+  await Promise.all(days.map(async d => { d.route = d.stops.length >= 2 ? await routeOf(d.stops) : null; }));
+  loading.hidden = true;
+  DAYS = days;
+  renderTripSum();
+  let i = sel;
+  if (i === undefined || i === "init") {
+    const m = location.hash.match(/day(\d+)/);
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+    const t = DAYS.findIndex(d => d.date === today);
+    i = m && DAYS[m[1] - 1] ? m[1] - 1 : t >= 0 ? t : null;
+  }
+  if (i !== null && !DAYS[i]) i = null;
+  select(i);
+}
+
+async function refresh() {
+  try {
+    const trip = await fetchTrip();
+    setStatus("ok", "แพลนล่าสุดจาก Google Sheet · " + new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }));
+    await show(trip);
+  } catch (e) {
+    console.warn("โหลด Google Sheet ไม่ได้:", e);
+    setStatus("warn", "โหลด Google Sheet ไม่ได้ กำลังแสดงแพลนสำรอง");
+  }
+}
+
+sel = "init";
+show(FALLBACK).then(refresh);
+let lastRefresh = Date.now();
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && Date.now() - lastRefresh > 60000) { lastRefresh = Date.now(); refresh(); }
+});
+window.addEventListener("hashchange", () => {
+  const m = location.hash.match(/day(\d+)/);
+  if (m && DAYS[m[1] - 1] && sel !== m[1] - 1) select(m[1] - 1);
+});
+</script>
+</body>
+</html>
